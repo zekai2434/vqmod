@@ -501,8 +501,230 @@ class RMAUpdate(BaseModel):
     tracking_number: Optional[str] = None
     replacement_serial: Optional[str] = None
     swap_device_id: Optional[str] = None
+    sent_date: Optional[str] = None
+    received_date: Optional[str] = None
+    notes: Optional[str] = None
 
-# Notification Models
+# SLA Profile Models
+class SLAProfile(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    code: str  # P1, P2, P3, P4
+    description: Optional[str] = None
+    response_time_hours: int  # İlk yanıt süresi
+    resolution_time_hours: int  # Çözüm süresi
+    is_default: bool = False
+    is_active: bool = True
+    color: str = "#3b82f6"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SLAProfileCreate(BaseModel):
+    name: str
+    code: str
+    description: Optional[str] = None
+    response_time_hours: int
+    resolution_time_hours: int
+    is_default: bool = False
+    color: str = "#3b82f6"
+
+class SLAProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    response_time_hours: Optional[int] = None
+    resolution_time_hours: Optional[int] = None
+    is_default: Optional[bool] = None
+    is_active: Optional[bool] = None
+    color: Optional[str] = None
+
+# Business Hours Calendar
+class BusinessHours(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: Optional[str] = None
+    timezone: str = "Europe/Istanbul"
+    monday: Dict[str, str] = {"start": "09:00", "end": "18:00", "enabled": True}
+    tuesday: Dict[str, str] = {"start": "09:00", "end": "18:00", "enabled": True}
+    wednesday: Dict[str, str] = {"start": "09:00", "end": "18:00", "enabled": True}
+    thursday: Dict[str, str] = {"start": "09:00", "end": "18:00", "enabled": True}
+    friday: Dict[str, str] = {"start": "09:00", "end": "18:00", "enabled": True}
+    saturday: Dict[str, str] = {"start": "09:00", "end": "13:00", "enabled": False}
+    sunday: Dict[str, str] = {"start": "00:00", "end": "00:00", "enabled": False}
+    holidays: List[str] = []  # ["2025-01-01", "2025-04-23"]
+    is_default: bool = False
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class BusinessHoursCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    timezone: str = "Europe/Istanbul"
+    monday: Dict[str, Any] = {"start": "09:00", "end": "18:00", "enabled": True}
+    tuesday: Dict[str, Any] = {"start": "09:00", "end": "18:00", "enabled": True}
+    wednesday: Dict[str, Any] = {"start": "09:00", "end": "18:00", "enabled": True}
+    thursday: Dict[str, Any] = {"start": "09:00", "end": "18:00", "enabled": True}
+    friday: Dict[str, Any] = {"start": "09:00", "end": "18:00", "enabled": True}
+    saturday: Dict[str, Any] = {"start": "09:00", "end": "13:00", "enabled": False}
+    sunday: Dict[str, Any] = {"start": "00:00", "end": "00:00", "enabled": False}
+    holidays: List[str] = []
+    is_default: bool = False
+
+class BusinessHoursUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    timezone: Optional[str] = None
+    monday: Optional[Dict[str, Any]] = None
+    tuesday: Optional[Dict[str, Any]] = None
+    wednesday: Optional[Dict[str, Any]] = None
+    thursday: Optional[Dict[str, Any]] = None
+    friday: Optional[Dict[str, Any]] = None
+    saturday: Optional[Dict[str, Any]] = None
+    sunday: Optional[Dict[str, Any]] = None
+    holidays: Optional[List[str]] = None
+    is_default: Optional[bool] = None
+    is_active: Optional[bool] = None
+
+# SLA Timer Pause/Resume
+class SLAPause(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    ticket_id: str
+    reason: str  # waiting_for_customer, waiting_for_parts, etc.
+    paused_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    resumed_at: Optional[datetime] = None
+    paused_by: str
+    resumed_by: Optional[str] = None
+    pause_duration_minutes: Optional[int] = None
+
+# Role & Permission Models
+class Permission(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    code: str
+    name: str
+    description: Optional[str] = None
+    module: str  # tickets, customers, assets, etc.
+
+class Role(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    code: str  # admin, manager, technician, viewer
+    description: Optional[str] = None
+    permissions: List[str] = []  # List of permission codes
+    is_system: bool = False  # System roles can't be deleted
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class RoleCreate(BaseModel):
+    name: str
+    code: str
+    description: Optional[str] = None
+    permissions: List[str] = []
+
+class RoleUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    permissions: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+
+# Asset History for tracking
+class AssetHistory(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    asset_id: str
+    event_type: str  # ticket_opened, maintenance, part_changed, rma, location_change
+    event_description: str
+    reference_type: Optional[str] = None  # ticket, work_order, rma
+    reference_id: Optional[str] = None
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
+    created_by: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Default Permissions
+DEFAULT_PERMISSIONS = [
+    {"code": "tickets.view", "name": "Ticket Görüntüleme", "module": "tickets"},
+    {"code": "tickets.create", "name": "Ticket Oluşturma", "module": "tickets"},
+    {"code": "tickets.edit", "name": "Ticket Düzenleme", "module": "tickets"},
+    {"code": "tickets.delete", "name": "Ticket Silme", "module": "tickets"},
+    {"code": "tickets.assign", "name": "Ticket Atama", "module": "tickets"},
+    {"code": "customers.view", "name": "Müşteri Görüntüleme", "module": "customers"},
+    {"code": "customers.create", "name": "Müşteri Oluşturma", "module": "customers"},
+    {"code": "customers.edit", "name": "Müşteri Düzenleme", "module": "customers"},
+    {"code": "customers.delete", "name": "Müşteri Silme", "module": "customers"},
+    {"code": "assets.view", "name": "Cihaz Görüntüleme", "module": "assets"},
+    {"code": "assets.create", "name": "Cihaz Oluşturma", "module": "assets"},
+    {"code": "assets.edit", "name": "Cihaz Düzenleme", "module": "assets"},
+    {"code": "assets.delete", "name": "Cihaz Silme", "module": "assets"},
+    {"code": "work_orders.view", "name": "İş Emri Görüntüleme", "module": "work_orders"},
+    {"code": "work_orders.create", "name": "İş Emri Oluşturma", "module": "work_orders"},
+    {"code": "work_orders.edit", "name": "İş Emri Düzenleme", "module": "work_orders"},
+    {"code": "parts.view", "name": "Parça Görüntüleme", "module": "parts"},
+    {"code": "parts.create", "name": "Parça Oluşturma", "module": "parts"},
+    {"code": "parts.edit", "name": "Parça Düzenleme", "module": "parts"},
+    {"code": "parts.stock", "name": "Stok Yönetimi", "module": "parts"},
+    {"code": "rma.view", "name": "RMA Görüntüleme", "module": "rma"},
+    {"code": "rma.create", "name": "RMA Oluşturma", "module": "rma"},
+    {"code": "rma.edit", "name": "RMA Düzenleme", "module": "rma"},
+    {"code": "reports.view", "name": "Rapor Görüntüleme", "module": "reports"},
+    {"code": "settings.view", "name": "Ayarlar Görüntüleme", "module": "settings"},
+    {"code": "settings.edit", "name": "Ayarlar Düzenleme", "module": "settings"},
+    {"code": "users.view", "name": "Kullanıcı Görüntüleme", "module": "users"},
+    {"code": "users.create", "name": "Kullanıcı Oluşturma", "module": "users"},
+    {"code": "users.edit", "name": "Kullanıcı Düzenleme", "module": "users"},
+]
+
+# Default Roles
+DEFAULT_ROLES = [
+    {
+        "name": "Sistem Yöneticisi",
+        "code": "admin",
+        "description": "Tüm yetkilere sahip sistem yöneticisi",
+        "permissions": [p["code"] for p in DEFAULT_PERMISSIONS],
+        "is_system": True
+    },
+    {
+        "name": "Servis Müdürü",
+        "code": "manager",
+        "description": "Operasyonel yönetim yetkilerine sahip",
+        "permissions": [
+            "tickets.view", "tickets.create", "tickets.edit", "tickets.assign",
+            "customers.view", "customers.create", "customers.edit",
+            "assets.view", "assets.create", "assets.edit",
+            "work_orders.view", "work_orders.create", "work_orders.edit",
+            "parts.view", "parts.create", "parts.edit", "parts.stock",
+            "rma.view", "rma.create", "rma.edit",
+            "reports.view", "users.view"
+        ],
+        "is_system": True
+    },
+    {
+        "name": "Teknisyen",
+        "code": "technician",
+        "description": "Saha servis teknisyeni",
+        "permissions": [
+            "tickets.view", "tickets.create", "tickets.edit",
+            "customers.view",
+            "assets.view",
+            "work_orders.view", "work_orders.edit",
+            "parts.view", "parts.stock",
+            "rma.view"
+        ],
+        "is_system": True
+    },
+    {
+        "name": "İzleyici",
+        "code": "viewer",
+        "description": "Sadece görüntüleme yetkisi",
+        "permissions": [
+            "tickets.view", "customers.view", "assets.view",
+            "work_orders.view", "parts.view", "rma.view", "reports.view"
+        ],
+        "is_system": True
+    }
+]
 class NotificationTemplate(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
