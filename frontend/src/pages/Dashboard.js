@@ -108,15 +108,15 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((stat, index) => (
-          <Card key={index} className="transition-shadow hover:shadow-md" data-testid={`stat-card-${index}`}>
+          <Card key={index} className="transition-shadow hover:shadow-lg border-l-4" style={{borderLeftColor: stat.color}} data-testid={`stat-card-${index}`}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                  <p className="text-3xl font-bold mt-2" style={{fontFamily: 'Chivo, sans-serif'}}>{stat.value}</p>
+                  <p className="text-4xl font-bold mt-2" style={{fontFamily: 'Chivo, sans-serif', color: stat.color}}>{stat.value}</p>
                 </div>
-                <div className={`p-4 rounded-lg ${stat.bg}`}>
-                  <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                <div className="p-4 rounded-lg" style={{backgroundColor: stat.bg}}>
+                  <stat.icon className="w-7 h-7" style={{color: stat.color}} />
                 </div>
               </div>
             </CardContent>
