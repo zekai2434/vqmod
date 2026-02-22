@@ -365,6 +365,10 @@ export default function WorkOrderDetail() {
                 <CheckCircle2 className="w-4 h-4 mr-2" />
                 Checklist ({completedTasks}/{totalTasks})
               </TabsTrigger>
+              <TabsTrigger value="parts">
+                <Package className="w-4 h-4 mr-2" />
+                Parçalar ({partUsage.length})
+              </TabsTrigger>
               <TabsTrigger value="report">
                 <FileSignature className="w-4 h-4 mr-2" />
                 Servis Raporu
