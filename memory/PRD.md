@@ -15,6 +15,16 @@ Network cihazları (switch, router vb.) için kapsamlı teknik servis yönetim y
 
 ## Tamamlanan Özellikler
 
+### Aralık 2025 - Parça / Depo / Sarf Yönetimi
+- [x] Parça kartları + stok seviyeleri
+- [x] İş emrine parça talebi / rezervasyon
+- [x] Stok giriş-çıkış (iş emrine bağlanarak)
+- [x] Seri no'lu parça takibi (SFP, PSU, cihaz vb.)
+- [x] İade / değişim / hurda akışı
+- [x] Min stok uyarıları
+- [x] Stok hareketleri geçmişi
+- [x] Kategori ve stok bazlı filtreleme
+
 ### Aralık 2025 - İş Emri ve Saha Servis Yönetimi
 - [x] Ticket → İş emri üretimi (uzaktan/yerinde/atölye)
 - [x] Teknisyen/ekip atama
@@ -81,6 +91,11 @@ Network cihazları (switch, router vb.) için kapsamlı teknik servis yönetim y
 - `/api/work-orders/*` - İş emri yönetimi
 - `/api/assets/*` - Cihaz envanteri
 - `/api/parts/*` - Parça yönetimi
+- `/api/stock-movements/*` - Stok hareketleri
+- `/api/part-reservations/*` - Parça rezervasyonları
+- `/api/part-usage/*` - Parça kullanımı
+- `/api/part-returns/*` - Parça iadeleri
+- `/api/serialized-parts/*` - Seri no'lu parçalar
 - `/api/rma/*` - RMA işlemleri
 - `/api/reports/*` - Raporlama
 - `/api/attachments/*` - Dosya yönetimi
@@ -90,4 +105,4 @@ Network cihazları (switch, router vb.) için kapsamlı teknik servis yönetim y
 - Şifre: Test123!
 
 ## Bilinen Sorunlar
-- Görsel önizleme modalında potansiyel oturum sorunu (düşük öncelik)
+- Dialog componentlerinde accessibility uyarısı (aria-describedby) - düşük öncelik
