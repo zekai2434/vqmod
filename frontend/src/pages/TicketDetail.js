@@ -107,6 +107,63 @@ export default function TicketDetail() {
     }
   };
 
+  const handleUploadFiles = async () => {
+    if (selectedFiles.length === 0) return;
+
+    setUploading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      for (const fileObj of selectedFiles) {
+        const reader = new FileReader();
+        
+        await new Promise((resolve, reject) => {
+          reader.onload = async (e) => {
+            try {
+              const base64Data = e.target.result.split(',')[1];
+              
+              await axios.post(`${API}/attachments`, {
+                related_to: 'ticket',
+                related_id: id,
+                filename: fileObj.name,
+                file_type: fileObj.type,
+                file_size: fileObj.size,
+                file_data: base64Data
+              }, { headers });
+              
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          };
+          
+          reader.onerror = reject;
+          reader.readAsDataURL(fileObj.file);
+        });
+      }
+
+      toast.success(`${selectedFiles.length} dosya yüklendi`);
+      setSelectedFiles([]);
+      setUploadDialogOpen(false);
+      fetchTicketDetails();
+    } catch (error) {
+      toast.error("Dosyalar yüklenirken hata oluştu");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const openImageViewer = (attachments) => {
+    const images = attachments.filter(att => att.file_type.startsWith('image/'));
+    if (images.length > 0) {
+      setViewerImages(images.map(img => ({
+        ...img,
+        file_data: `data:${img.file_type};base64,${img.file_data}`
+      })));
+    }
+  };
+
   const getStatusBadge = (status) => {
     const variants = {
       open: { variant: "default", label: "Açık" },
