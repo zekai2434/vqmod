@@ -573,6 +573,13 @@ export default function TicketDetail() {
           )}
         </div>
       </div>
+
+      {viewerImages && (
+        <ImageViewer
+          images={viewerImages}
+          onClose={() => setViewerImages(null)}
+        />
+      )}
     </div>
   );
 }
