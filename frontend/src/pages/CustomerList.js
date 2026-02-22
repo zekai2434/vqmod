@@ -192,7 +192,12 @@ export default function CustomerList() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {customers.map((customer) => (
-            <Card key={customer.id} data-testid={`customer-card-${customer.id}`} className="hover:shadow-md transition-shadow">
+            <Card 
+              key={customer.id} 
+              data-testid={`customer-card-${customer.id}`} 
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => navigate(`/customers/${customer.id}`)}
+            >
               <CardHeader>
                 <CardTitle className="text-xl">{customer.name}</CardTitle>
                 {customer.company && (
