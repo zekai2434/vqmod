@@ -8,6 +8,7 @@ import TicketList from "@/pages/TicketList";
 import TicketDetail from "@/pages/TicketDetail";
 import NewTicket from "@/pages/NewTicket";
 import CustomerList from "@/pages/CustomerList";
+import CustomerDetail from "@/pages/CustomerDetail";
 import AssetList from "@/pages/AssetList";
 import PartList from "@/pages/PartList";
 import RMAList from "@/pages/RMAList";
