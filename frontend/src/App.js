@@ -16,6 +16,8 @@ import WorkOrderDetail from "@/pages/WorkOrderDetail";
 import UserList from "@/pages/UserList";
 import Reports from "@/pages/Reports";
 import NotificationSettings from "@/pages/NotificationSettings";
+import SLASettings from "@/pages/SLASettings";
+import RoleSettings from "@/pages/RoleSettings";
 import { Toaster } from "sonner";
 
 const PrivateRoute = ({ children }) => {
@@ -48,6 +50,8 @@ function App() {
             <Route path="users" element={<UserList />} />
             <Route path="reports" element={<Reports />} />
             <Route path="notifications" element={<NotificationSettings />} />
+            <Route path="sla-settings" element={<SLASettings />} />
+            <Route path="roles" element={<RoleSettings />} />
           </Route>
         </Routes>
       </BrowserRouter>
