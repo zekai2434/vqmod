@@ -15,6 +15,7 @@ import WorkOrderList from "@/pages/WorkOrderList";
 import WorkOrderDetail from "@/pages/WorkOrderDetail";
 import UserList from "@/pages/UserList";
 import Reports from "@/pages/Reports";
+import NotificationSettings from "@/pages/NotificationSettings";
 import { Toaster } from "sonner";
 
 const PrivateRoute = ({ children }) => {
@@ -46,6 +47,7 @@ function App() {
             <Route path="work-orders/:id" element={<WorkOrderDetail />} />
             <Route path="users" element={<UserList />} />
             <Route path="reports" element={<Reports />} />
+            <Route path="notifications" element={<NotificationSettings />} />
           </Route>
         </Routes>
       </BrowserRouter>
