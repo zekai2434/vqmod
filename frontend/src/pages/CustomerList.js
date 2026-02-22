@@ -234,27 +234,53 @@ export default function CustomerList() {
             <Card 
               key={customer.id} 
               data-testid={`customer-card-${customer.id}`} 
-              className="hover:shadow-md transition-shadow cursor-pointer"
+              className="hover:shadow-lg transition-all cursor-pointer border-l-4 overflow-hidden"
+              style={{borderLeftColor: customer.sla_level === 'platinum' ? '#8B5CF6' : customer.sla_level === 'gold' ? '#F59E0B' : '#3B82F6'}}
               onClick={() => navigate(`/customers/${customer.id}`)}
             >
-              <CardHeader>
-                <CardTitle className="text-xl">{customer.name}</CardTitle>
-                {customer.company && (
-                  <p className="text-sm text-muted-foreground">{customer.company}</p>
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-xl mb-1">{customer.name}</CardTitle>
+                    {customer.company && (
+                      <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                        <Building2 className="w-3 h-3" />
+                        {customer.company}
+                      </p>
+                    )}
+                  </div>
+                  <Badge 
+                    variant={customer.sla_level === 'platinum' ? 'secondary' : customer.sla_level === 'gold' ? 'warning' : 'info'}
+                  >
+                    {customer.sla_level}
+                  </Badge>
+                </div>
+                {customer.tags && customer.tags.length > 0 && (
+                  <div className="flex gap-1 flex-wrap mt-2">
+                    {customer.tags.map((tag, idx) => (
+                      <Badge key={idx} variant="outline" className="text-xs">{tag}</Badge>
+                    ))}
+                  </div>
                 )}
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2 pt-3 border-t">
                 <div className="flex items-center gap-2 text-sm">
-                  <Mail className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{customer.email}</span>
+                  <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-muted-foreground truncate">{customer.email}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
+                  <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <span className="text-muted-foreground">{customer.phone}</span>
                 </div>
-                <div className="pt-2 border-t border-border text-sm">
-                  <p><span className="text-muted-foreground">SLA:</span> <span className="font-medium">{customer.sla_level}</span></p>
-                  <p><span className="text-muted-foreground">Sözleşme:</span> <span className="font-medium">{customer.contract_type}</span></p>
+                {customer.address && (
+                  <div className="flex items-start gap-2 text-sm">
+                    <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                    <span className="text-muted-foreground line-clamp-2">{customer.address}</span>
+                  </div>
+                )}
+                <div className="pt-2 border-t border-border text-xs flex items-center justify-between">
+                  <span className="text-muted-foreground">Sözleşme:</span>
+                  <span className="font-medium capitalize">{customer.contract_type}</span>
                 </div>
               </CardContent>
             </Card>
