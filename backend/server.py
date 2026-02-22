@@ -2567,6 +2567,370 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# SLA Profile Endpoints
+@api_router.get("/sla-profiles", response_model=List[SLAProfile])
+async def get_sla_profiles(current_user: User = Depends(get_current_user)):
+    profiles = await db.sla_profiles.find({"is_active": True}, {"_id": 0}).to_list(100)
+    for p in profiles:
+        if isinstance(p['created_at'], str):
+            p['created_at'] = datetime.fromisoformat(p['created_at'])
+    return profiles
+
+@api_router.post("/sla-profiles", response_model=SLAProfile)
+async def create_sla_profile(profile: SLAProfileCreate, current_user: User = Depends(get_current_user)):
+    existing = await db.sla_profiles.find_one({"code": profile.code}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="SLA profile code already exists")
+    
+    if profile.is_default:
+        await db.sla_profiles.update_many({}, {"$set": {"is_default": False}})
+    
+    profile_obj = SLAProfile(**profile.model_dump())
+    doc = profile_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.sla_profiles.insert_one(doc)
+    return profile_obj
+
+@api_router.patch("/sla-profiles/{profile_id}", response_model=SLAProfile)
+async def update_sla_profile(profile_id: str, update: SLAProfileUpdate, current_user: User = Depends(get_current_user)):
+    profile = await db.sla_profiles.find_one({"id": profile_id}, {"_id": 0})
+    if not profile:
+        raise HTTPException(status_code=404, detail="SLA profile not found")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    
+    if update.is_default:
+        await db.sla_profiles.update_many({}, {"$set": {"is_default": False}})
+    
+    await db.sla_profiles.update_one({"id": profile_id}, {"$set": update_data})
+    
+    updated = await db.sla_profiles.find_one({"id": profile_id}, {"_id": 0})
+    if isinstance(updated['created_at'], str):
+        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    return SLAProfile(**updated)
+
+@api_router.delete("/sla-profiles/{profile_id}")
+async def delete_sla_profile(profile_id: str, current_user: User = Depends(get_current_user)):
+    await db.sla_profiles.update_one({"id": profile_id}, {"$set": {"is_active": False}})
+    return {"status": "success"}
+
+# Business Hours Endpoints
+@api_router.get("/business-hours", response_model=List[BusinessHours])
+async def get_business_hours(current_user: User = Depends(get_current_user)):
+    hours = await db.business_hours.find({"is_active": True}, {"_id": 0}).to_list(100)
+    for h in hours:
+        if isinstance(h['created_at'], str):
+            h['created_at'] = datetime.fromisoformat(h['created_at'])
+    return hours
+
+@api_router.post("/business-hours", response_model=BusinessHours)
+async def create_business_hours(hours: BusinessHoursCreate, current_user: User = Depends(get_current_user)):
+    if hours.is_default:
+        await db.business_hours.update_many({}, {"$set": {"is_default": False}})
+    
+    hours_obj = BusinessHours(**hours.model_dump())
+    doc = hours_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.business_hours.insert_one(doc)
+    return hours_obj
+
+@api_router.patch("/business-hours/{hours_id}", response_model=BusinessHours)
+async def update_business_hours(hours_id: str, update: BusinessHoursUpdate, current_user: User = Depends(get_current_user)):
+    hours = await db.business_hours.find_one({"id": hours_id}, {"_id": 0})
+    if not hours:
+        raise HTTPException(status_code=404, detail="Business hours not found")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    
+    if update.is_default:
+        await db.business_hours.update_many({}, {"$set": {"is_default": False}})
+    
+    await db.business_hours.update_one({"id": hours_id}, {"$set": update_data})
+    
+    updated = await db.business_hours.find_one({"id": hours_id}, {"_id": 0})
+    if isinstance(updated['created_at'], str):
+        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    return BusinessHours(**updated)
+
+# SLA Pause/Resume Endpoints
+@api_router.post("/tickets/{ticket_id}/pause-sla")
+async def pause_ticket_sla(ticket_id: str, reason: str, current_user: User = Depends(get_current_user)):
+    ticket = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    if ticket.get('sla_paused'):
+        raise HTTPException(status_code=400, detail="SLA already paused")
+    
+    pause = SLAPause(ticket_id=ticket_id, reason=reason, paused_by=current_user.id)
+    doc = pause.model_dump()
+    doc['paused_at'] = doc['paused_at'].isoformat()
+    await db.sla_pauses.insert_one(doc)
+    
+    await db.tickets.update_one(
+        {"id": ticket_id},
+        {"$set": {"sla_paused": True, "sla_pause_reason": reason, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"status": "success", "message": "SLA paused", "pause_id": pause.id}
+
+@api_router.post("/tickets/{ticket_id}/resume-sla")
+async def resume_ticket_sla(ticket_id: str, current_user: User = Depends(get_current_user)):
+    ticket = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    if not ticket.get('sla_paused'):
+        raise HTTPException(status_code=400, detail="SLA is not paused")
+    
+    active_pause = await db.sla_pauses.find_one(
+        {"ticket_id": ticket_id, "resumed_at": None},
+        {"_id": 0}
+    )
+    
+    if active_pause:
+        paused_at = datetime.fromisoformat(active_pause['paused_at']) if isinstance(active_pause['paused_at'], str) else active_pause['paused_at']
+        now = datetime.now(timezone.utc)
+        pause_duration = int((now - paused_at).total_seconds() / 60)
+        
+        await db.sla_pauses.update_one(
+            {"id": active_pause['id']},
+            {
+                "$set": {
+                    "resumed_at": now.isoformat(),
+                    "resumed_by": current_user.id,
+                    "pause_duration_minutes": pause_duration
+                }
+            }
+        )
+        
+        total_pause = ticket.get('total_pause_minutes', 0) + pause_duration
+        
+        if ticket.get('sla_deadline'):
+            old_deadline = datetime.fromisoformat(ticket['sla_deadline']) if isinstance(ticket['sla_deadline'], str) else ticket['sla_deadline']
+            new_deadline = old_deadline + timedelta(minutes=pause_duration)
+            
+            await db.tickets.update_one(
+                {"id": ticket_id},
+                {
+                    "$set": {
+                        "sla_paused": False,
+                        "sla_pause_reason": None,
+                        "total_pause_minutes": total_pause,
+                        "sla_deadline": new_deadline.isoformat(),
+                        "updated_at": now.isoformat()
+                    }
+                }
+            )
+        else:
+            await db.tickets.update_one(
+                {"id": ticket_id},
+                {
+                    "$set": {
+                        "sla_paused": False,
+                        "sla_pause_reason": None,
+                        "total_pause_minutes": total_pause,
+                        "updated_at": now.isoformat()
+                    }
+                }
+            )
+    
+    return {"status": "success", "message": "SLA resumed"}
+
+@api_router.get("/tickets/{ticket_id}/sla-history")
+async def get_ticket_sla_history(ticket_id: str, current_user: User = Depends(get_current_user)):
+    pauses = await db.sla_pauses.find({"ticket_id": ticket_id}, {"_id": 0}).sort("paused_at", -1).to_list(100)
+    for p in pauses:
+        if isinstance(p['paused_at'], str):
+            p['paused_at'] = datetime.fromisoformat(p['paused_at'])
+        if p.get('resumed_at') and isinstance(p['resumed_at'], str):
+            p['resumed_at'] = datetime.fromisoformat(p['resumed_at'])
+    return pauses
+
+# Role & Permission Endpoints
+@api_router.get("/permissions")
+async def get_permissions(current_user: User = Depends(get_current_user)):
+    return DEFAULT_PERMISSIONS
+
+@api_router.get("/roles", response_model=List[Role])
+async def get_roles(current_user: User = Depends(get_current_user)):
+    roles = await db.roles.find({"is_active": True}, {"_id": 0}).to_list(100)
+    
+    if not roles:
+        for role_data in DEFAULT_ROLES:
+            role = Role(**role_data)
+            doc = role.model_dump()
+            doc['created_at'] = doc['created_at'].isoformat()
+            await db.roles.insert_one(doc)
+        
+        roles = await db.roles.find({"is_active": True}, {"_id": 0}).to_list(100)
+    
+    for r in roles:
+        if isinstance(r['created_at'], str):
+            r['created_at'] = datetime.fromisoformat(r['created_at'])
+    return roles
+
+@api_router.post("/roles", response_model=Role)
+async def create_role(role: RoleCreate, current_user: User = Depends(get_current_user)):
+    existing = await db.roles.find_one({"code": role.code}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Role code already exists")
+    
+    role_obj = Role(**role.model_dump())
+    doc = role_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.roles.insert_one(doc)
+    return role_obj
+
+@api_router.patch("/roles/{role_id}", response_model=Role)
+async def update_role(role_id: str, update: RoleUpdate, current_user: User = Depends(get_current_user)):
+    role = await db.roles.find_one({"id": role_id}, {"_id": 0})
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+    
+    if role.get('is_system'):
+        raise HTTPException(status_code=400, detail="System roles cannot be modified")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    await db.roles.update_one({"id": role_id}, {"$set": update_data})
+    
+    updated = await db.roles.find_one({"id": role_id}, {"_id": 0})
+    if isinstance(updated['created_at'], str):
+        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    return Role(**updated)
+
+@api_router.delete("/roles/{role_id}")
+async def delete_role(role_id: str, current_user: User = Depends(get_current_user)):
+    role = await db.roles.find_one({"id": role_id}, {"_id": 0})
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+    
+    if role.get('is_system'):
+        raise HTTPException(status_code=400, detail="System roles cannot be deleted")
+    
+    await db.roles.update_one({"id": role_id}, {"$set": {"is_active": False}})
+    return {"status": "success"}
+
+# Asset Update and History Endpoints
+@api_router.patch("/assets/{asset_id}")
+async def update_asset(asset_id: str, update: AssetUpdate, current_user: User = Depends(get_current_user)):
+    asset = await db.assets.find_one({"id": asset_id}, {"_id": 0})
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    
+    for field, new_value in update_data.items():
+        old_value = asset.get(field)
+        if old_value != new_value and field not in ['notes']:
+            history = AssetHistory(
+                asset_id=asset_id,
+                event_type="field_change",
+                event_description=f"{field} değiştirildi",
+                old_value=str(old_value) if old_value else None,
+                new_value=str(new_value),
+                created_by=current_user.id
+            )
+            doc = history.model_dump()
+            doc['created_at'] = doc['created_at'].isoformat()
+            await db.asset_history.insert_one(doc)
+    
+    await db.assets.update_one({"id": asset_id}, {"$set": update_data})
+    
+    updated = await db.assets.find_one({"id": asset_id}, {"_id": 0})
+    if isinstance(updated['created_at'], str):
+        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    return updated
+
+@api_router.get("/assets/{asset_id}/history")
+async def get_asset_history(asset_id: str, current_user: User = Depends(get_current_user)):
+    history = await db.asset_history.find({"asset_id": asset_id}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    
+    tickets = await db.tickets.find({"asset_id": asset_id}, {"_id": 0}).to_list(500)
+    for t in tickets:
+        history.append({
+            "id": f"ticket-{t['id']}",
+            "asset_id": asset_id,
+            "event_type": "ticket_opened",
+            "event_description": f"Ticket açıldı: {t['ticket_number']} - {t['title']}",
+            "reference_type": "ticket",
+            "reference_id": t['id'],
+            "created_by": t.get('created_by'),
+            "created_at": t['created_at']
+        })
+    
+    work_orders = await db.work_orders.find({}, {"_id": 0}).to_list(1000)
+    for wo in work_orders:
+        ticket = await db.tickets.find_one({"id": wo['ticket_id']}, {"_id": 0})
+        if ticket and ticket.get('asset_id') == asset_id:
+            history.append({
+                "id": f"wo-{wo['id']}",
+                "asset_id": asset_id,
+                "event_type": "work_order",
+                "event_description": f"İş emri: {wo['work_type']} - {wo['status']}",
+                "reference_type": "work_order",
+                "reference_id": wo['id'],
+                "created_by": wo.get('assigned_technician'),
+                "created_at": wo['created_at']
+            })
+    
+    rmas = await db.rmas.find({"asset_id": asset_id}, {"_id": 0}).to_list(100)
+    for rma in rmas:
+        history.append({
+            "id": f"rma-{rma['id']}",
+            "asset_id": asset_id,
+            "event_type": "rma",
+            "event_description": f"RMA: {rma['rma_number']} - {rma['status']}",
+            "reference_type": "rma",
+            "reference_id": rma['id'],
+            "created_by": None,
+            "created_at": rma['created_at']
+        })
+    
+    history.sort(key=lambda x: x['created_at'] if isinstance(x['created_at'], str) else x['created_at'].isoformat(), reverse=True)
+    
+    return history
+
+@api_router.get("/assets/warranty-expiring")
+async def get_warranty_expiring_assets(days: int = 30, current_user: User = Depends(get_current_user)):
+    assets = await db.assets.find({"status": "active"}, {"_id": 0}).to_list(10000)
+    
+    now = datetime.now(timezone.utc)
+    warning_date = now + timedelta(days=days)
+    
+    expiring = []
+    for asset in assets:
+        if asset.get('warranty_end'):
+            warranty_end = datetime.fromisoformat(asset['warranty_end']) if isinstance(asset['warranty_end'], str) else asset['warranty_end']
+            if warranty_end.tzinfo is None:
+                warranty_end = warranty_end.replace(tzinfo=timezone.utc)
+            
+            if now <= warranty_end <= warning_date:
+                days_remaining = (warranty_end - now).days
+                expiring.append({
+                    **asset,
+                    "days_remaining": days_remaining,
+                    "expiry_type": "warranty"
+                })
+        
+        if asset.get('support_end'):
+            support_end = datetime.fromisoformat(asset['support_end']) if isinstance(asset['support_end'], str) else asset['support_end']
+            if support_end.tzinfo is None:
+                support_end = support_end.replace(tzinfo=timezone.utc)
+            
+            if now <= support_end <= warning_date:
+                days_remaining = (support_end - now).days
+                exists = next((e for e in expiring if e['id'] == asset['id']), None)
+                if not exists:
+                    expiring.append({
+                        **asset,
+                        "days_remaining": days_remaining,
+                        "expiry_type": "support"
+                    })
+    
+    expiring.sort(key=lambda x: x['days_remaining'])
+    return expiring
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
