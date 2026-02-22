@@ -821,6 +821,311 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
         "low_stock_parts": low_stock_parts
     }
 
+@api_router.get("/reports/sla-compliance")
+async def get_sla_compliance(start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {"status": {"$in": ["resolved", "closed"]}}
+    
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = end_date
+        else:
+            query["created_at"] = {"$lte": end_date}
+    
+    resolved_tickets = await db.tickets.find(query, {"_id": 0}).to_list(10000)
+    
+    total_resolved = len(resolved_tickets)
+    sla_met = 0
+    sla_breached = 0
+    
+    for ticket in resolved_tickets:
+        if ticket.get('resolved_at') and ticket.get('sla_deadline'):
+            resolved_time = datetime.fromisoformat(ticket['resolved_at']) if isinstance(ticket['resolved_at'], str) else ticket['resolved_at']
+            sla_time = datetime.fromisoformat(ticket['sla_deadline']) if isinstance(ticket['sla_deadline'], str) else ticket['sla_deadline']
+            
+            if resolved_time <= sla_time:
+                sla_met += 1
+            else:
+                sla_breached += 1
+    
+    compliance_rate = (sla_met / total_resolved * 100) if total_resolved > 0 else 0
+    
+    return {
+        "total_resolved": total_resolved,
+        "sla_met": sla_met,
+        "sla_breached": sla_breached,
+        "compliance_rate": round(compliance_rate, 2)
+    }
+
+@api_router.get("/reports/mttr")
+async def get_mttr_report(start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {"status": {"$in": ["resolved", "closed"]}, "resolved_at": {"$ne": None}}
+    
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = end_date
+        else:
+            query["created_at"] = {"$lte": end_date}
+    
+    resolved_tickets = await db.tickets.find(query, {"_id": 0}).to_list(10000)
+    
+    total_resolution_time = 0
+    count = 0
+    resolution_times_by_priority = {"critical": [], "high": [], "medium": [], "low": []}
+    
+    for ticket in resolved_tickets:
+        created = datetime.fromisoformat(ticket['created_at']) if isinstance(ticket['created_at'], str) else ticket['created_at']
+        resolved = datetime.fromisoformat(ticket['resolved_at']) if isinstance(ticket['resolved_at'], str) else ticket['resolved_at']
+        
+        resolution_time = (resolved - created).total_seconds() / 3600
+        total_resolution_time += resolution_time
+        count += 1
+        
+        priority = ticket.get('priority', 'medium')
+        if priority in resolution_times_by_priority:
+            resolution_times_by_priority[priority].append(resolution_time)
+    
+    avg_mttr = (total_resolution_time / count) if count > 0 else 0
+    
+    avg_by_priority = {}
+    for priority, times in resolution_times_by_priority.items():
+        avg_by_priority[priority] = (sum(times) / len(times)) if times else 0
+    
+    return {
+        "average_mttr_hours": round(avg_mttr, 2),
+        "total_tickets": count,
+        "mttr_by_priority": {
+            "critical": round(avg_by_priority["critical"], 2),
+            "high": round(avg_by_priority["high"], 2),
+            "medium": round(avg_by_priority["medium"], 2),
+            "low": round(avg_by_priority["low"], 2)
+        }
+    }
+
+@api_router.get("/reports/category-analysis")
+async def get_category_analysis(start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {}
+    
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = end_date
+        else:
+            query["created_at"] = {"$lte": end_date}
+    
+    tickets = await db.tickets.find(query, {"_id": 0}).to_list(10000)
+    
+    category_counts = {}
+    priority_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    
+    for ticket in tickets:
+        category = ticket.get('category', 'other')
+        category_counts[category] = category_counts.get(category, 0) + 1
+        
+        priority = ticket.get('priority', 'medium')
+        if priority in priority_counts:
+            priority_counts[priority] += 1
+    
+    category_list = [{"category": k, "count": v} for k, v in category_counts.items()]
+    category_list.sort(key=lambda x: x['count'], reverse=True)
+    
+    return {
+        "by_category": category_list,
+        "by_priority": priority_counts
+    }
+
+@api_router.get("/reports/technician-performance")
+async def get_technician_performance(start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {}
+    
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = end_date
+        else:
+            query["created_at"] = {"$lte": end_date}
+    
+    work_orders = await db.work_orders.find(query, {"_id": 0}).to_list(10000)
+    tickets = await db.tickets.find(query, {"_id": 0}).to_list(10000)
+    users = await db.users.find({"role": {"$in": ["technician", "admin"]}}, {"_id": 0}).to_list(1000)
+    
+    technician_stats = {}
+    
+    for user in users:
+        technician_stats[user['id']] = {
+            "name": user['full_name'],
+            "assigned_tickets": 0,
+            "completed_work_orders": 0,
+            "total_time_spent": 0,
+            "avg_resolution_time": 0
+        }
+    
+    for ticket in tickets:
+        assigned_to = ticket.get('assigned_to')
+        if assigned_to and assigned_to in technician_stats:
+            technician_stats[assigned_to]["assigned_tickets"] += 1
+    
+    for wo in work_orders:
+        tech_id = wo.get('assigned_technician')
+        if tech_id and tech_id in technician_stats:
+            if wo.get('status') == 'completed':
+                technician_stats[tech_id]["completed_work_orders"] += 1
+            time_spent = wo.get('time_spent_minutes', 0)
+            technician_stats[tech_id]["total_time_spent"] += time_spent
+    
+    result = []
+    for tech_id, stats in technician_stats.items():
+        if stats["completed_work_orders"] > 0:
+            stats["avg_resolution_time"] = round(stats["total_time_spent"] / stats["completed_work_orders"], 2)
+        result.append({
+            "technician_id": tech_id,
+            **stats
+        })
+    
+    result.sort(key=lambda x: x['completed_work_orders'], reverse=True)
+    
+    return result
+
+@api_router.get("/reports/ticket-aging")
+async def get_ticket_aging(current_user: User = Depends(get_current_user)):
+    open_tickets = await db.tickets.find({"status": {"$nin": ["resolved", "closed"]}}, {"_id": 0}).to_list(10000)
+    
+    now = datetime.now(timezone.utc)
+    age_groups = {
+        "0-24h": 0,
+        "1-3d": 0,
+        "3-7d": 0,
+        "7-14d": 0,
+        "14d+": 0
+    }
+    
+    for ticket in open_tickets:
+        created = datetime.fromisoformat(ticket['created_at']) if isinstance(ticket['created_at'], str) else ticket['created_at']
+        age_hours = (now - created).total_seconds() / 3600
+        
+        if age_hours <= 24:
+            age_groups["0-24h"] += 1
+        elif age_hours <= 72:
+            age_groups["1-3d"] += 1
+        elif age_hours <= 168:
+            age_groups["3-7d"] += 1
+        elif age_hours <= 336:
+            age_groups["7-14d"] += 1
+        else:
+            age_groups["14d+"] += 1
+    
+    return age_groups
+
+@api_router.get("/reports/trend-analysis")
+async def get_trend_analysis(days: int = 30, current_user: User = Depends(get_current_user)):
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=days)
+    
+    tickets = await db.tickets.find({
+        "created_at": {"$gte": start_date.isoformat()}
+    }, {"_id": 0}).to_list(10000)
+    
+    daily_counts = {}
+    for i in range(days):
+        date = (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
+        daily_counts[date] = {"created": 0, "resolved": 0}
+    
+    for ticket in tickets:
+        created = datetime.fromisoformat(ticket['created_at']) if isinstance(ticket['created_at'], str) else ticket['created_at']
+        created_date = created.strftime("%Y-%m-%d")
+        
+        if created_date in daily_counts:
+            daily_counts[created_date]["created"] += 1
+        
+        if ticket.get('resolved_at'):
+            resolved = datetime.fromisoformat(ticket['resolved_at']) if isinstance(ticket['resolved_at'], str) else ticket['resolved_at']
+            resolved_date = resolved.strftime("%Y-%m-%d")
+            if resolved_date in daily_counts:
+                daily_counts[resolved_date]["resolved"] += 1
+    
+    trend_data = [{"date": k, **v} for k, v in sorted(daily_counts.items())]
+    
+    return trend_data
+
+@api_router.get("/reports/customer-analysis")
+async def get_customer_analysis(current_user: User = Depends(get_current_user)):
+    customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+    tickets = await db.tickets.find({}, {"_id": 0}).to_list(10000)
+    
+    customer_stats = {}
+    
+    for customer in customers:
+        customer_stats[customer['id']] = {
+            "name": customer['name'],
+            "company": customer.get('company', ''),
+            "total_tickets": 0,
+            "open_tickets": 0,
+            "sla_breaches": 0
+        }
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    for ticket in tickets:
+        customer_id = ticket.get('customer_id')
+        if customer_id and customer_id in customer_stats:
+            customer_stats[customer_id]["total_tickets"] += 1
+            
+            if ticket['status'] not in ["resolved", "closed"]:
+                customer_stats[customer_id]["open_tickets"] += 1
+                
+                if ticket.get('sla_deadline') and ticket['sla_deadline'] < now:
+                    customer_stats[customer_id]["sla_breaches"] += 1
+    
+    result = [{"customer_id": k, **v} for k, v in customer_stats.items() if v["total_tickets"] > 0]
+    result.sort(key=lambda x: x['total_tickets'], reverse=True)
+    
+    return result[:20]
+
+@api_router.get("/reports/part-consumption")
+async def get_part_consumption(start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {}
+    
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = end_date
+        else:
+            query["created_at"] = {"$lte": end_date}
+    
+    part_usage = await db.part_usage.find(query, {"_id": 0}).to_list(10000)
+    parts = await db.parts.find({}, {"_id": 0}).to_list(1000)
+    
+    part_map = {p['id']: p for p in parts}
+    consumption = {}
+    
+    for usage in part_usage:
+        part_id = usage['part_id']
+        if part_id in part_map:
+            part_name = part_map[part_id]['name']
+            part_number = part_map[part_id]['part_number']
+            
+            if part_id not in consumption:
+                consumption[part_id] = {
+                    "part_name": part_name,
+                    "part_number": part_number,
+                    "total_used": 0,
+                    "usage_count": 0
+                }
+            
+            consumption[part_id]["total_used"] += usage['quantity']
+            consumption[part_id]["usage_count"] += 1
+    
+    result = [{"part_id": k, **v} for k, v in consumption.items()]
+    result.sort(key=lambda x: x['total_used'], reverse=True)
+    
+    return result
+
 @api_router.get("/users", response_model=List[User])
 async def get_users(current_user: User = Depends(get_current_user)):
     users = await db.users.find({}, {"_id": 0, "hashed_password": 0}).to_list(1000)
