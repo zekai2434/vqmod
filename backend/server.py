@@ -1245,6 +1245,45 @@ async def get_assets(customer_id: Optional[str] = None, is_spare: Optional[bool]
             a['created_at'] = datetime.fromisoformat(a['created_at'])
     return assets
 
+@api_router.get("/assets/warranty-expiring")
+async def get_warranty_expiring_assets(days: int = 30, current_user: User = Depends(get_current_user)):
+    """Get assets with warranty or support expiring within specified days"""
+    assets = await db.assets.find({"status": "active"}, {"_id": 0}).to_list(10000)
+    
+    now = datetime.now(timezone.utc)
+    warning_date = now + timedelta(days=days)
+    
+    expiring = []
+    for asset in assets:
+        if asset.get('warranty_end'):
+            try:
+                warranty_end = datetime.fromisoformat(asset['warranty_end'].replace('Z', '+00:00'))
+                if warranty_end.tzinfo is None:
+                    warranty_end = warranty_end.replace(tzinfo=timezone.utc)
+                
+                if now <= warranty_end <= warning_date:
+                    days_remaining = (warranty_end - now).days
+                    expiring.append({**asset, "days_remaining": days_remaining, "expiry_type": "warranty"})
+            except:
+                pass
+        
+        if asset.get('support_end'):
+            try:
+                support_end = datetime.fromisoformat(asset['support_end'].replace('Z', '+00:00'))
+                if support_end.tzinfo is None:
+                    support_end = support_end.replace(tzinfo=timezone.utc)
+                
+                if now <= support_end <= warning_date:
+                    days_remaining = (support_end - now).days
+                    exists = next((e for e in expiring if e['id'] == asset['id']), None)
+                    if not exists:
+                        expiring.append({**asset, "days_remaining": days_remaining, "expiry_type": "support"})
+            except:
+                pass
+    
+    expiring.sort(key=lambda x: x['days_remaining'])
+    return expiring
+
 @api_router.get("/assets/{asset_id}", response_model=Asset)
 async def get_asset(asset_id: str, current_user: User = Depends(get_current_user)):
     asset = await db.assets.find_one({"id": asset_id}, {"_id": 0})
