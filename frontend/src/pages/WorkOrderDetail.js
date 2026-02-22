@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Clock, User, Calendar, CheckCircle2, Upload, Camera, FileSignature, Save } from "lucide-react";
+import { ArrowLeft, Clock, User, Calendar, CheckCircle2, Upload, Camera, FileSignature, Save, Package, Plus, Trash2 } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
 import axios from "axios";
 import { toast } from "sonner";
@@ -27,12 +27,19 @@ export default function WorkOrderDetail() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
+  const [partDialogOpen, setPartDialogOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [serviceReport, setServiceReport] = useState("");
   const [timeSpent, setTimeSpent] = useState(0);
   const [signatureData, setSignatureData] = useState("");
+  const [parts, setParts] = useState([]);
+  const [partUsage, setPartUsage] = useState([]);
+  const [partReservations, setPartReservations] = useState([]);
+  const [selectedPart, setSelectedPart] = useState("");
+  const [partQuantity, setPartQuantity] = useState(1);
+  const [addingPart, setAddingPart] = useState(false);
 
   useEffect(() => {
     if (id) fetchWorkOrderDetails();
