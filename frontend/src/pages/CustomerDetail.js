@@ -225,6 +225,7 @@ export default function CustomerDetail() {
           <TabsList>
             <TabsTrigger value="contacts">İrtibat Kişileri ({contacts.length})</TabsTrigger>
             <TabsTrigger value="locations">Lokasyonlar ({locations.length})</TabsTrigger>
+            <TabsTrigger value="documents">Dosyalar ({documents.length})</TabsTrigger>
             <TabsTrigger value="assets">Cihazlar ({assets.length})</TabsTrigger>
             <TabsTrigger value="tickets">Ticketlar ({tickets.length})</TabsTrigger>
           </TabsList>
