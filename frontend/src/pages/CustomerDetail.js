@@ -352,6 +352,85 @@ export default function CustomerDetail() {
             )}
           </TabsContent>
 
+          <TabsContent value="documents" className="space-y-4 mt-4">
+            <div className="flex justify-end">
+              <Dialog open={documentDialogOpen} onOpenChange={setDocumentDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button data-testid="add-document-btn">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Dosya Yükle
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Müşteri Dosyası Yükle</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Sözleşme, teslim formu, teknik şartname gibi müşteri belgelerini yükleyebilirsiniz.
+                    </p>
+                    <FileUpload
+                      onFilesSelected={setSelectedFiles}
+                      maxFiles={10}
+                      maxSizeMB={20}
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                    />
+                    <div className="flex gap-2 pt-4">
+                      <Button 
+                        onClick={handleUploadDocuments} 
+                        disabled={selectedFiles.length === 0 || uploading}
+                        data-testid="confirm-document-upload-btn"
+                      >
+                        {uploading ? "Yükleniyor..." : "Yükle"}
+                      </Button>
+                      <Button variant="outline" onClick={() => setDocumentDialogOpen(false)}>
+                        İptal
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            
+            {documents.length === 0 ? (
+              <Card className="p-8"><p className="text-center text-muted-foreground">Dosya yok</p></Card>
+            ) : (
+              <div className="grid gap-3">
+                {documents.map((doc) => (
+                  <Card key={doc.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                          {doc.file_type.includes('pdf') ? (
+                            <FileText className="w-6 h-6 text-red-600" />
+                          ) : doc.file_type.includes('image') ? (
+                            <img 
+                              src={`data:${doc.file_type};base64,${doc.file_data}`}
+                              alt={doc.filename}
+                              className="w-full h-full object-cover rounded"
+                            />
+                          ) : (
+                            <Paperclip className="w-6 h-6 text-muted-foreground" />
+                          )}
+                        </div>
+                        
+                        <div className="flex-1">
+                          <p className="font-medium">{doc.filename}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {(doc.file_size / 1024).toFixed(2)} KB
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(doc.created_at).toLocaleDateString('tr-TR')}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
           <TabsContent value="assets" className="mt-4">
             {assets.length === 0 ? (
               <Card className="p-8"><p className="text-center text-muted-foreground">Cihaz yok</p></Card>
