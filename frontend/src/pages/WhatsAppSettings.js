@@ -60,6 +60,11 @@ export default function WhatsAppSettings() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setStatus(response.data);
+      
+      // If waiting for QR, fetch QR immediately
+      if (response.data.status === 'waiting_qr') {
+        fetchQR();
+      }
     } catch (error) {
       console.error("Error fetching status:", error);
       setStatus({ connected: false, status: "error" });
