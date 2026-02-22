@@ -154,6 +154,10 @@ class Asset(BaseModel):
     location: Optional[str] = None
     purchase_date: Optional[str] = None
     warranty_end: Optional[str] = None
+    support_end: Optional[str] = None
+    support_contract_id: Optional[str] = None
+    firmware_version: Optional[str] = None
+    configuration: Optional[str] = None
     status: str = "active"
     is_spare: bool = False
     notes: Optional[str] = None
@@ -172,7 +176,24 @@ class AssetCreate(BaseModel):
     location: Optional[str] = None
     purchase_date: Optional[str] = None
     warranty_end: Optional[str] = None
+    support_end: Optional[str] = None
+    support_contract_id: Optional[str] = None
+    firmware_version: Optional[str] = None
     is_spare: bool = False
+    notes: Optional[str] = None
+
+class AssetUpdate(BaseModel):
+    location_id: Optional[str] = None
+    hostname: Optional[str] = None
+    ip_address: Optional[str] = None
+    location: Optional[str] = None
+    warranty_end: Optional[str] = None
+    support_end: Optional[str] = None
+    support_contract_id: Optional[str] = None
+    firmware_version: Optional[str] = None
+    configuration: Optional[str] = None
+    status: Optional[str] = None
+    is_spare: Optional[bool] = None
     notes: Optional[str] = None
 
 class TicketComment(BaseModel):
