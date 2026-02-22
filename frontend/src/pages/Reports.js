@@ -412,16 +412,19 @@ export default function Reports() {
                 {categoryData && (
                   <div className="space-y-3">
                     {categoryData.by_category.map((cat, idx) => (
-                      <div key={idx} className="flex items-center justify-between">
-                        <span className="text-sm">{cat.category}</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                      <div key={idx} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                        <span className="text-sm font-medium">{cat.category}</span>
+                        <div className="flex items-center gap-3">
+                          <div className="w-32 h-3 bg-muted rounded-full overflow-hidden">
                             <div 
-                              className="h-full bg-primary" 
-                              style={{width: `${(cat.count / categoryData.by_category[0].count) * 100}%`}}
+                              className="h-full rounded-full" 
+                              style={{
+                                width: `${(cat.count / categoryData.by_category[0].count) * 100}%`,
+                                backgroundColor: COLORS[idx % COLORS.length]
+                              }}
                             />
                           </div>
-                          <Badge>{cat.count}</Badge>
+                          <span className="font-bold text-lg min-w-[3rem] text-right" style={{color: COLORS[idx % COLORS.length]}}>{cat.count}</span>
                         </div>
                       </div>
                     ))}
