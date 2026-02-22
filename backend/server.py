@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -12,6 +12,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from passlib.context import CryptContext
 from jose import JWTError, jwt
+import base64
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -57,6 +58,43 @@ class Token(BaseModel):
     token_type: str
     user: User
 
+class Contact(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    customer_id: str
+    name: str
+    title: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    is_primary: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ContactCreate(BaseModel):
+    customer_id: str
+    name: str
+    title: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    is_primary: bool = False
+
+class Location(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    customer_id: str
+    name: str
+    address: str
+    city: Optional[str] = None
+    parent_location_id: Optional[str] = None
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class LocationCreate(BaseModel):
+    customer_id: str
+    name: str
+    address: str
+    city: Optional[str] = None
+    parent_location_id: Optional[str] = None
+
 class Customer(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -65,8 +103,12 @@ class Customer(BaseModel):
     email: EmailStr
     phone: str
     address: Optional[str] = None
+    tax_number: Optional[str] = None
+    tax_office: Optional[str] = None
     contract_type: Optional[str] = "standard"
     sla_level: str = "standard"
+    tags: List[str] = []
+    notes: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class CustomerCreate(BaseModel):
@@ -75,32 +117,83 @@ class CustomerCreate(BaseModel):
     email: EmailStr
     phone: str
     address: Optional[str] = None
+    tax_number: Optional[str] = None
+    tax_office: Optional[str] = None
     contract_type: Optional[str] = "standard"
     sla_level: str = "standard"
+    tags: List[str] = []
+    notes: Optional[str] = None
 
 class Asset(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     customer_id: str
+    location_id: Optional[str] = None
     serial_number: str
     device_type: str
     brand: str
     model: str
+    mac_address: Optional[str] = None
+    hostname: Optional[str] = None
+    ip_address: Optional[str] = None
     location: Optional[str] = None
     purchase_date: Optional[str] = None
     warranty_end: Optional[str] = None
     status: str = "active"
+    is_spare: bool = False
+    notes: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class AssetCreate(BaseModel):
     customer_id: str
+    location_id: Optional[str] = None
     serial_number: str
     device_type: str
     brand: str
     model: str
+    mac_address: Optional[str] = None
+    hostname: Optional[str] = None
+    ip_address: Optional[str] = None
     location: Optional[str] = None
     purchase_date: Optional[str] = None
     warranty_end: Optional[str] = None
+    is_spare: bool = False
+    notes: Optional[str] = None
+
+class TicketComment(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    ticket_id: str
+    user_id: str
+    user_name: str
+    comment: str
+    is_internal: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class TicketCommentCreate(BaseModel):
+    ticket_id: str
+    comment: str
+    is_internal: bool = False
+
+class Attachment(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    related_to: str
+    related_id: str
+    filename: str
+    file_type: str
+    file_size: int
+    file_data: str
+    uploaded_by: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class AttachmentCreate(BaseModel):
+    related_to: str
+    related_id: str
+    filename: str
+    file_type: str
+    file_size: int
+    file_data: str
 
 class Ticket(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -111,10 +204,15 @@ class Ticket(BaseModel):
     title: str
     description: str
     category: str
+    subcategory: Optional[str] = None
     priority: str
     status: str = "open"
+    channel: str = "phone"
     assigned_to: Optional[str] = None
     sla_deadline: Optional[datetime] = None
+    on_hold_reason: Optional[str] = None
+    is_out_of_scope: bool = False
+    out_of_scope_reason: Optional[str] = None
     created_by: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -126,31 +224,65 @@ class TicketCreate(BaseModel):
     title: str
     description: str
     category: str
+    subcategory: Optional[str] = None
     priority: str
+    channel: str = "phone"
     assigned_to: Optional[str] = None
 
 class TicketUpdate(BaseModel):
     status: Optional[str] = None
     assigned_to: Optional[str] = None
     priority: Optional[str] = None
+    on_hold_reason: Optional[str] = None
+    is_out_of_scope: Optional[bool] = None
+    out_of_scope_reason: Optional[str] = None
+
+class WorkOrderChecklistItem(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    task: str
+    completed: bool = False
+    completed_at: Optional[datetime] = None
 
 class WorkOrder(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     ticket_id: str
     assigned_technician: str
+    work_type: str = "onsite"
     scheduled_date: Optional[str] = None
     status: str = "scheduled"
     notes: Optional[str] = None
-    parts_used: List[str] = []
+    service_report: Optional[str] = None
+    parts_used: List[Dict[str, Any]] = []
+    checklist: List[WorkOrderChecklistItem] = []
+    time_spent_minutes: int = 0
+    customer_signature: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None
 
 class WorkOrderCreate(BaseModel):
     ticket_id: str
     assigned_technician: str
+    work_type: str = "onsite"
     scheduled_date: Optional[str] = None
     notes: Optional[str] = None
+    checklist: List[WorkOrderChecklistItem] = []
+
+class WorkOrderUpdate(BaseModel):
+    status: Optional[str] = None
+    service_report: Optional[str] = None
+    time_spent_minutes: Optional[int] = None
+    customer_signature: Optional[str] = None
+    checklist: Optional[List[WorkOrderChecklistItem]] = None
+
+class PartReservation(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    part_id: str
+    work_order_id: str
+    quantity: int
+    status: str = "reserved"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Part(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -159,9 +291,11 @@ class Part(BaseModel):
     name: str
     category: str
     quantity: int = 0
+    reserved_quantity: int = 0
     min_stock: int = 5
     unit_price: float = 0.0
     supplier: Optional[str] = None
+    has_serial: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class PartCreate(BaseModel):
@@ -172,6 +306,24 @@ class PartCreate(BaseModel):
     min_stock: int = 5
     unit_price: float = 0.0
     supplier: Optional[str] = None
+    has_serial: bool = False
+
+class PartUsage(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    part_id: str
+    work_order_id: str
+    ticket_id: str
+    quantity: int
+    serial_numbers: List[str] = []
+    created_by: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class PartUsageCreate(BaseModel):
+    part_id: str
+    work_order_id: str
+    quantity: int
+    serial_numbers: List[str] = []
 
 class RMA(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -181,7 +333,13 @@ class RMA(BaseModel):
     ticket_id: Optional[str] = None
     status: str = "pending"
     reason: str
+    manufacturer: Optional[str] = None
+    manufacturer_rma_number: Optional[str] = None
+    tracking_number: Optional[str] = None
     replacement_serial: Optional[str] = None
+    swap_device_id: Optional[str] = None
+    sent_date: Optional[datetime] = None
+    received_date: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None
 
@@ -189,6 +347,14 @@ class RMACreate(BaseModel):
     asset_id: str
     ticket_id: Optional[str] = None
     reason: str
+    manufacturer: Optional[str] = None
+
+class RMAUpdate(BaseModel):
+    status: Optional[str] = None
+    manufacturer_rma_number: Optional[str] = None
+    tracking_number: Optional[str] = None
+    replacement_serial: Optional[str] = None
+    swap_device_id: Optional[str] = None
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -277,6 +443,40 @@ async def get_customer(customer_id: str, current_user: User = Depends(get_curren
         customer['created_at'] = datetime.fromisoformat(customer['created_at'])
     return Customer(**customer)
 
+@api_router.post("/contacts", response_model=Contact)
+async def create_contact(contact: ContactCreate, current_user: User = Depends(get_current_user)):
+    contact_obj = Contact(**contact.model_dump())
+    doc = contact_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.contacts.insert_one(doc)
+    return contact_obj
+
+@api_router.get("/contacts", response_model=List[Contact])
+async def get_contacts(customer_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {} if not customer_id else {"customer_id": customer_id}
+    contacts = await db.contacts.find(query, {"_id": 0}).to_list(1000)
+    for c in contacts:
+        if isinstance(c['created_at'], str):
+            c['created_at'] = datetime.fromisoformat(c['created_at'])
+    return contacts
+
+@api_router.post("/locations", response_model=Location)
+async def create_location(location: LocationCreate, current_user: User = Depends(get_current_user)):
+    location_obj = Location(**location.model_dump())
+    doc = location_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.locations.insert_one(doc)
+    return location_obj
+
+@api_router.get("/locations", response_model=List[Location])
+async def get_locations(customer_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {} if not customer_id else {"customer_id": customer_id}
+    locations = await db.locations.find(query, {"_id": 0}).to_list(1000)
+    for l in locations:
+        if isinstance(l['created_at'], str):
+            l['created_at'] = datetime.fromisoformat(l['created_at'])
+    return locations
+
 @api_router.post("/assets", response_model=Asset)
 async def create_asset(asset: AssetCreate, current_user: User = Depends(get_current_user)):
     asset_obj = Asset(**asset.model_dump())
@@ -286,8 +486,12 @@ async def create_asset(asset: AssetCreate, current_user: User = Depends(get_curr
     return asset_obj
 
 @api_router.get("/assets", response_model=List[Asset])
-async def get_assets(customer_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
-    query = {} if not customer_id else {"customer_id": customer_id}
+async def get_assets(customer_id: Optional[str] = None, is_spare: Optional[bool] = None, current_user: User = Depends(get_current_user)):
+    query = {}
+    if customer_id:
+        query["customer_id"] = customer_id
+    if is_spare is not None:
+        query["is_spare"] = is_spare
     assets = await db.assets.find(query, {"_id": 0}).to_list(1000)
     for a in assets:
         if isinstance(a['created_at'], str):
@@ -385,6 +589,42 @@ async def update_ticket(ticket_id: str, update: TicketUpdate, current_user: User
         updated_ticket['resolved_at'] = datetime.fromisoformat(updated_ticket['resolved_at'])
     return Ticket(**updated_ticket)
 
+@api_router.post("/tickets/{ticket_id}/comments", response_model=TicketComment)
+async def add_ticket_comment(ticket_id: str, comment: TicketCommentCreate, current_user: User = Depends(get_current_user)):
+    comment_obj = TicketComment(
+        **comment.model_dump(),
+        user_id=current_user.id,
+        user_name=current_user.full_name
+    )
+    doc = comment_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.ticket_comments.insert_one(doc)
+    return comment_obj
+
+@api_router.get("/tickets/{ticket_id}/comments", response_model=List[TicketComment])
+async def get_ticket_comments(ticket_id: str, current_user: User = Depends(get_current_user)):
+    comments = await db.ticket_comments.find({"ticket_id": ticket_id}, {"_id": 0}).sort("created_at", 1).to_list(1000)
+    for c in comments:
+        if isinstance(c['created_at'], str):
+            c['created_at'] = datetime.fromisoformat(c['created_at'])
+    return comments
+
+@api_router.post("/attachments", response_model=Attachment)
+async def upload_attachment(attachment: AttachmentCreate, current_user: User = Depends(get_current_user)):
+    attachment_obj = Attachment(**attachment.model_dump(), uploaded_by=current_user.id)
+    doc = attachment_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.attachments.insert_one(doc)
+    return attachment_obj
+
+@api_router.get("/attachments", response_model=List[Attachment])
+async def get_attachments(related_to: str, related_id: str, current_user: User = Depends(get_current_user)):
+    attachments = await db.attachments.find({"related_to": related_to, "related_id": related_id}, {"_id": 0}).to_list(1000)
+    for a in attachments:
+        if isinstance(a['created_at'], str):
+            a['created_at'] = datetime.fromisoformat(a['created_at'])
+    return attachments
+
 @api_router.post("/work-orders", response_model=WorkOrder)
 async def create_work_order(work_order: WorkOrderCreate, current_user: User = Depends(get_current_user)):
     work_order_obj = WorkOrder(**work_order.model_dump())
@@ -406,6 +646,33 @@ async def get_work_orders(ticket_id: Optional[str] = None, current_user: User = 
             wo['completed_at'] = datetime.fromisoformat(wo['completed_at'])
     return work_orders
 
+@api_router.get("/work-orders/{work_order_id}", response_model=WorkOrder)
+async def get_work_order(work_order_id: str, current_user: User = Depends(get_current_user)):
+    work_order = await db.work_orders.find_one({"id": work_order_id}, {"_id": 0})
+    if not work_order:
+        raise HTTPException(status_code=404, detail="Work order not found")
+    if isinstance(work_order['created_at'], str):
+        work_order['created_at'] = datetime.fromisoformat(work_order['created_at'])
+    if work_order.get('completed_at') and isinstance(work_order['completed_at'], str):
+        work_order['completed_at'] = datetime.fromisoformat(work_order['completed_at'])
+    return WorkOrder(**work_order)
+
+@api_router.patch("/work-orders/{work_order_id}", response_model=WorkOrder)
+async def update_work_order(work_order_id: str, update: WorkOrderUpdate, current_user: User = Depends(get_current_user)):
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    
+    if update.status == "completed":
+        update_data['completed_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.work_orders.update_one({"id": work_order_id}, {"$set": update_data})
+    
+    work_order = await db.work_orders.find_one({"id": work_order_id}, {"_id": 0})
+    if isinstance(work_order['created_at'], str):
+        work_order['created_at'] = datetime.fromisoformat(work_order['created_at'])
+    if work_order.get('completed_at') and isinstance(work_order['completed_at'], str):
+        work_order['completed_at'] = datetime.fromisoformat(work_order['completed_at'])
+    return WorkOrder(**work_order)
+
 @api_router.post("/parts", response_model=Part)
 async def create_part(part: PartCreate, current_user: User = Depends(get_current_user)):
     part_obj = Part(**part.model_dump())
@@ -422,6 +689,44 @@ async def get_parts(current_user: User = Depends(get_current_user)):
             p['created_at'] = datetime.fromisoformat(p['created_at'])
     return parts
 
+@api_router.post("/part-usage", response_model=PartUsage)
+async def add_part_usage(usage: PartUsageCreate, current_user: User = Depends(get_current_user)):
+    part = await db.parts.find_one({"id": usage.part_id}, {"_id": 0})
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found")
+    
+    if part["quantity"] < usage.quantity:
+        raise HTTPException(status_code=400, detail="Insufficient stock")
+    
+    work_order = await db.work_orders.find_one({"id": usage.work_order_id}, {"_id": 0})
+    if not work_order:
+        raise HTTPException(status_code=404, detail="Work order not found")
+    
+    usage_obj = PartUsage(
+        **usage.model_dump(),
+        ticket_id=work_order["ticket_id"],
+        created_by=current_user.id
+    )
+    doc = usage_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.part_usage.insert_one(doc)
+    
+    await db.parts.update_one(
+        {"id": usage.part_id},
+        {"$inc": {"quantity": -usage.quantity}}
+    )
+    
+    return usage_obj
+
+@api_router.get("/part-usage", response_model=List[PartUsage])
+async def get_part_usage(work_order_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {} if not work_order_id else {"work_order_id": work_order_id}
+    usage_list = await db.part_usage.find(query, {"_id": 0}).to_list(1000)
+    for u in usage_list:
+        if isinstance(u['created_at'], str):
+            u['created_at'] = datetime.fromisoformat(u['created_at'])
+    return usage_list
+
 @api_router.post("/rma", response_model=RMA)
 async def create_rma(rma: RMACreate, current_user: User = Depends(get_current_user)):
     rma_count = await db.rma.count_documents({})
@@ -432,6 +737,10 @@ async def create_rma(rma: RMACreate, current_user: User = Depends(get_current_us
     doc['created_at'] = doc['created_at'].isoformat()
     if doc['completed_at']:
         doc['completed_at'] = doc['completed_at'].isoformat()
+    if doc['sent_date']:
+        doc['sent_date'] = doc['sent_date'].isoformat()
+    if doc['received_date']:
+        doc['received_date'] = doc['received_date'].isoformat()
     await db.rma.insert_one(doc)
     return rma_obj
 
@@ -443,13 +752,41 @@ async def get_rma_list(current_user: User = Depends(get_current_user)):
             r['created_at'] = datetime.fromisoformat(r['created_at'])
         if r.get('completed_at') and isinstance(r['completed_at'], str):
             r['completed_at'] = datetime.fromisoformat(r['completed_at'])
+        if r.get('sent_date') and isinstance(r['sent_date'], str):
+            r['sent_date'] = datetime.fromisoformat(r['sent_date'])
+        if r.get('received_date') and isinstance(r['received_date'], str):
+            r['received_date'] = datetime.fromisoformat(r['received_date'])
     return rma_list
+
+@api_router.patch("/rma/{rma_id}", response_model=RMA)
+async def update_rma(rma_id: str, update: RMAUpdate, current_user: User = Depends(get_current_user)):
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    
+    if update.status == "completed":
+        update_data['completed_at'] = datetime.now(timezone.utc).isoformat()
+        update_data['received_date'] = datetime.now(timezone.utc).isoformat()
+    elif update.status == "shipped":
+        update_data['sent_date'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.rma.update_one({"id": rma_id}, {"$set": update_data})
+    
+    rma = await db.rma.find_one({"id": rma_id}, {"_id": 0})
+    if isinstance(rma['created_at'], str):
+        rma['created_at'] = datetime.fromisoformat(rma['created_at'])
+    if rma.get('completed_at') and isinstance(rma['completed_at'], str):
+        rma['completed_at'] = datetime.fromisoformat(rma['completed_at'])
+    if rma.get('sent_date') and isinstance(rma['sent_date'], str):
+        rma['sent_date'] = datetime.fromisoformat(rma['sent_date'])
+    if rma.get('received_date') and isinstance(rma['received_date'], str):
+        rma['received_date'] = datetime.fromisoformat(rma['received_date'])
+    return RMA(**rma)
 
 @api_router.get("/reports/dashboard")
 async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
     total_tickets = await db.tickets.count_documents({})
     open_tickets = await db.tickets.count_documents({"status": "open"})
     in_progress = await db.tickets.count_documents({"status": "in_progress"})
+    on_hold = await db.tickets.count_documents({"status": "on_hold"})
     resolved = await db.tickets.count_documents({"status": "resolved"})
     
     now = datetime.now(timezone.utc).isoformat()
@@ -458,19 +795,30 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
         "sla_deadline": {"$lt": now}
     })
     
+    out_of_scope = await db.tickets.count_documents({"is_out_of_scope": True})
+    
     total_customers = await db.customers.count_documents({})
-    total_assets = await db.assets.count_documents({})
-    active_work_orders = await db.work_orders.count_documents({"status": "scheduled"})
+    total_assets = await db.assets.count_documents({"is_spare": False})
+    spare_assets = await db.assets.count_documents({"is_spare": True})
+    active_work_orders = await db.work_orders.count_documents({"status": {"$in": ["scheduled", "in_progress"]}})
+    active_rmas = await db.rma.count_documents({"status": {"$nin": ["completed", "rejected"]}})
+    
+    low_stock_parts = await db.parts.count_documents({"$expr": {"$lte": ["$quantity", "$min_stock"]}})
     
     return {
         "total_tickets": total_tickets,
         "open_tickets": open_tickets,
         "in_progress_tickets": in_progress,
+        "on_hold_tickets": on_hold,
         "resolved_tickets": resolved,
         "sla_risk_tickets": sla_risk,
+        "out_of_scope_tickets": out_of_scope,
         "total_customers": total_customers,
         "total_assets": total_assets,
-        "active_work_orders": active_work_orders
+        "spare_assets": spare_assets,
+        "active_work_orders": active_work_orders,
+        "active_rmas": active_rmas,
+        "low_stock_parts": low_stock_parts
     }
 
 @api_router.get("/users", response_model=List[User])
