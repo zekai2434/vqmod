@@ -37,6 +37,7 @@ function App() {
             <Route path="tickets/:id" element={<TicketDetail />} />
             <Route path="tickets/new" element={<NewTicket />} />
             <Route path="customers" element={<CustomerList />} />
+            <Route path="customers/:id" element={<CustomerDetail />} />
             <Route path="assets" element={<AssetList />} />
             <Route path="parts" element={<PartList />} />
             <Route path="rma" element={<RMAList />} />
