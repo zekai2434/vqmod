@@ -54,12 +54,13 @@ export default function CustomerDetail() {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
       
-      const [customerRes, contactsRes, locationsRes, assetsRes, ticketsRes] = await Promise.all([
+      const [customerRes, contactsRes, locationsRes, assetsRes, ticketsRes, documentsRes] = await Promise.all([
         axios.get(`${API}/customers/${id}`, { headers }),
         axios.get(`${API}/contacts?customer_id=${id}`, { headers }),
         axios.get(`${API}/locations?customer_id=${id}`, { headers }),
         axios.get(`${API}/assets?customer_id=${id}`, { headers }),
-        axios.get(`${API}/tickets`, { headers })
+        axios.get(`${API}/tickets`, { headers }),
+        axios.get(`${API}/attachments?related_to=customer&related_id=${id}`, { headers })
       ]);
       
       setCustomer(customerRes.data);
@@ -67,6 +68,7 @@ export default function CustomerDetail() {
       setLocations(locationsRes.data);
       setAssets(assetsRes.data);
       setTickets(ticketsRes.data.filter(t => t.customer_id === id));
+      setDocuments(documentsRes.data);
     } catch (error) {
       toast.error("Veri yüklenirken hata oluştu");
     } finally {
