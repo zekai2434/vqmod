@@ -573,13 +573,13 @@ class BusinessHours(BaseModel):
     name: str
     description: Optional[str] = None
     timezone: str = "Europe/Istanbul"
-    monday: Dict[str, str] = {"start": "09:00", "end": "18:00", "enabled": True}
-    tuesday: Dict[str, str] = {"start": "09:00", "end": "18:00", "enabled": True}
-    wednesday: Dict[str, str] = {"start": "09:00", "end": "18:00", "enabled": True}
-    thursday: Dict[str, str] = {"start": "09:00", "end": "18:00", "enabled": True}
-    friday: Dict[str, str] = {"start": "09:00", "end": "18:00", "enabled": True}
-    saturday: Dict[str, str] = {"start": "09:00", "end": "13:00", "enabled": False}
-    sunday: Dict[str, str] = {"start": "00:00", "end": "00:00", "enabled": False}
+    monday: Dict[str, Any] = {"start": "09:00", "end": "18:00", "enabled": True}
+    tuesday: Dict[str, Any] = {"start": "09:00", "end": "18:00", "enabled": True}
+    wednesday: Dict[str, Any] = {"start": "09:00", "end": "18:00", "enabled": True}
+    thursday: Dict[str, Any] = {"start": "09:00", "end": "18:00", "enabled": True}
+    friday: Dict[str, Any] = {"start": "09:00", "end": "18:00", "enabled": True}
+    saturday: Dict[str, Any] = {"start": "09:00", "end": "13:00", "enabled": False}
+    sunday: Dict[str, Any] = {"start": "00:00", "end": "00:00", "enabled": False}
     holidays: List[str] = []  # ["2025-01-01", "2025-04-23"]
     is_default: bool = False
     is_active: bool = True
