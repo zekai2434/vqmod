@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Ticket, Users, Package, HardDrive, Wrench, FileText, Settings, LogOut, Menu, X } from "lucide-react";
+import { LayoutDashboard, Ticket, Users, Package, HardDrive, Wrench, FileText, Settings, LogOut, Menu, X, Bell } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ export default function DashboardLayout() {
     { path: "/parts", icon: Package, label: "Parçalar" },
     { path: "/rma", icon: FileText, label: "RMA" },
     { path: "/reports", icon: FileText, label: "Raporlar" },
+    { path: "/notifications", icon: Bell, label: "Bildirimler" },
     { path: "/users", icon: Settings, label: "Kullanıcılar" },
   ];
 
