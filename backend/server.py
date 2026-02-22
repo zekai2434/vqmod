@@ -224,7 +224,13 @@ class Ticket(BaseModel):
     status: str = "open"
     channel: str = "phone"
     assigned_to: Optional[str] = None
+    sla_profile_id: Optional[str] = None
     sla_deadline: Optional[datetime] = None
+    sla_response_deadline: Optional[datetime] = None
+    first_response_at: Optional[datetime] = None
+    sla_paused: bool = False
+    sla_pause_reason: Optional[str] = None
+    total_pause_minutes: int = 0
     on_hold_reason: Optional[str] = None
     is_out_of_scope: bool = False
     out_of_scope_reason: Optional[str] = None
@@ -243,11 +249,13 @@ class TicketCreate(BaseModel):
     priority: str
     channel: str = "phone"
     assigned_to: Optional[str] = None
+    sla_profile_id: Optional[str] = None
 
 class TicketUpdate(BaseModel):
     status: Optional[str] = None
     assigned_to: Optional[str] = None
     priority: Optional[str] = None
+    sla_profile_id: Optional[str] = None
     on_hold_reason: Optional[str] = None
     is_out_of_scope: Optional[bool] = None
     out_of_scope_reason: Optional[str] = None
