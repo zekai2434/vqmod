@@ -454,10 +454,20 @@ export default function Reports() {
                         dataKey="value"
                       >
                         {[0, 1, 2, 3].map((index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index]} />
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={[FLAT_COLORS.red, FLAT_COLORS.orange, FLAT_COLORS.blue, FLAT_COLORS.slate][index]} 
+                          />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: '#fff',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                        }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 )}
