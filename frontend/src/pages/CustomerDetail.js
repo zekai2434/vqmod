@@ -108,6 +108,53 @@ export default function CustomerDetail() {
     }
   };
 
+  const handleUploadDocuments = async () => {
+    if (selectedFiles.length === 0) return;
+
+    setUploading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      for (const fileObj of selectedFiles) {
+        const reader = new FileReader();
+        
+        await new Promise((resolve, reject) => {
+          reader.onload = async (e) => {
+            try {
+              const base64Data = e.target.result.split(',')[1];
+              
+              await axios.post(`${API}/attachments`, {
+                related_to: 'customer',
+                related_id: id,
+                filename: fileObj.name,
+                file_type: fileObj.type,
+                file_size: fileObj.size,
+                file_data: base64Data
+              }, { headers });
+              
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          };
+          
+          reader.onerror = reject;
+          reader.readAsDataURL(fileObj.file);
+        });
+      }
+
+      toast.success(`${selectedFiles.length} dosya yüklendi`);
+      setSelectedFiles([]);
+      setDocumentDialogOpen(false);
+      fetchData();
+    } catch (error) {
+      toast.error("Dosyalar yüklenirken hata oluştu");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-96">Yükleniyor...</div>;
   }
