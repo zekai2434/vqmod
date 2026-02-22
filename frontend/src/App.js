@@ -14,6 +14,7 @@ import PartList from "@/pages/PartList";
 import RMAList from "@/pages/RMAList";
 import WorkOrderList from "@/pages/WorkOrderList";
 import UserList from "@/pages/UserList";
+import Reports from "@/pages/Reports";
 import { Toaster } from "sonner";
 
 const PrivateRoute = ({ children }) => {
