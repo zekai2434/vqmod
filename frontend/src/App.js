@@ -19,6 +19,7 @@ import NotificationSettings from "@/pages/NotificationSettings";
 import SLASettings from "@/pages/SLASettings";
 import RoleSettings from "@/pages/RoleSettings";
 import EmailSettings from "@/pages/EmailSettings";
+import WhatsAppSettings from "@/pages/WhatsAppSettings";
 // Customer Portal
 import CustomerPortalLogin from "@/pages/CustomerPortalLogin";
 import CustomerPortalLayout from "@/components/CustomerPortalLayout";
