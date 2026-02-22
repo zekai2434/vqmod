@@ -354,6 +354,40 @@ export default function TicketDetail() {
             </TabsContent>
 
             <TabsContent value="attachments" className="mt-4">
+              <div className="mb-4">
+                <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button data-testid="upload-file-btn">
+                      <Upload className="w-4 h-4 mr-2" />
+                      Dosya Yükle
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Dosya Yükle</DialogTitle>
+                    </DialogHeader>
+                    <FileUpload
+                      onFilesSelected={setSelectedFiles}
+                      maxFiles={10}
+                      maxSizeMB={10}
+                      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                    />
+                    <div className="flex gap-2 pt-4">
+                      <Button 
+                        onClick={handleUploadFiles} 
+                        disabled={selectedFiles.length === 0 || uploading}
+                        data-testid="confirm-upload-btn"
+                      >
+                        {uploading ? "Yükleniyor..." : "Yükle"}
+                      </Button>
+                      <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>
+                        İptal
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
               {attachments.length === 0 ? (
                 <Card className="p-8">
                   <p className="text-center text-muted-foreground">Dosya yok</p>
@@ -362,17 +396,59 @@ export default function TicketDetail() {
                 <div className="grid gap-3">
                   {attachments.map((att) => (
                     <Card key={att.id}>
-                      <CardContent className="p-4 flex items-center gap-3">
-                        <Paperclip className="w-5 h-5 text-muted-foreground" />
-                        <div className="flex-1">
-                          <p className="font-medium">{att.filename}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {(att.file_size / 1024).toFixed(2)} KB
-                          </p>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          {att.file_type.startsWith('image/') ? (
+                            <div 
+                              className="w-16 h-16 rounded overflow-hidden flex-shrink-0 bg-muted cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => openImageViewer([att])}
+                            >
+                              <img 
+                                src={`data:${att.file_type};base64,${att.file_data}`}
+                                alt={att.filename}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-16 h-16 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                              <Paperclip className="w-8 h-8 text-muted-foreground" />
+                            </div>
+                          )}
+                          
+                          <div className="flex-1">
+                            <p className="font-medium">{att.filename}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {(att.file_size / 1024).toFixed(2)} KB
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(att.created_at).toLocaleDateString('tr-TR')}
+                            </p>
+                          </div>
+
+                          {att.file_type.startsWith('image/') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openImageViewer([att])}
+                            >
+                              <ImageIcon className="w-4 h-4 mr-2" />
+                              Görüntüle
+                            </Button>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
                   ))}
+                  
+                  {attachments.filter(a => a.file_type.startsWith('image/')).length > 1 && (
+                    <Button
+                      variant="outline"
+                      onClick={() => openImageViewer(attachments.filter(a => a.file_type.startsWith('image/')))}
+                    >
+                      <ImageIcon className="w-4 h-4 mr-2" />
+                      Tüm Resimleri Görüntüle
+                    </Button>
+                  )}
                 </div>
               )}
             </TabsContent>
