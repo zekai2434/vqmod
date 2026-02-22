@@ -20,6 +20,7 @@ import SLASettings from "@/pages/SLASettings";
 import RoleSettings from "@/pages/RoleSettings";
 import EmailSettings from "@/pages/EmailSettings";
 import WhatsAppSettings from "@/pages/WhatsAppSettings";
+import PortalUserList from "@/pages/PortalUserList";
 // Customer Portal
 import CustomerPortalLogin from "@/pages/CustomerPortalLogin";
 import CustomerPortalLayout from "@/components/CustomerPortalLayout";
