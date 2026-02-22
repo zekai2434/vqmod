@@ -1,0 +1,192 @@
+{
+  "design_system": {
+    "name": "NetworkOps Pro",
+    "description": "Enterprise Technical Service Management System",
+    "archetype": "Swiss & High-Contrast",
+    "theme_strategy": "Hybrid (Light/Dark Toggle)",
+    "emotional_tone": "Professional, Efficient, Reliable, Technical"
+  },
+  "typography": {
+    "font_family": {
+      "heading": "Chivo, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-4xl font-bold tracking-tight",
+      "h2": "text-3xl font-semibold tracking-tight",
+      "h3": "text-2xl font-semibold tracking-tight",
+      "h4": "text-xl font-medium tracking-tight",
+      "body_lg": "text-lg leading-relaxed",
+      "body_base": "text-base leading-normal",
+      "body_sm": "text-sm leading-normal",
+      "caption": "text-xs text-muted-foreground"
+    },
+    "weights": {
+      "regular": "400",
+      "medium": "500",
+      "semibold": "600",
+      "bold": "700"
+    }
+  },
+  "colors": {
+    "primary": {
+      "name": "Electric Blue",
+      "hex": "#0052CC",
+      "tailwind": "bg-blue-700 text-white hover:bg-blue-800"
+    },
+    "secondary": {
+      "name": "Slate",
+      "hex": "#64748B",
+      "tailwind": "bg-slate-500 text-white"
+    },
+    "background": {
+      "light": "#FFFFFF",
+      "dark": "#09090B",
+      "subtle_light": "#F8FAFC",
+      "subtle_dark": "#18181B"
+    },
+    "semantic": {
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444",
+      "info": "#3B82F6"
+    },
+    "gradients": {
+      "login_overlay": "bg-gradient-to-br from-blue-900/90 to-slate-900/90",
+      "card_highlight": "bg-gradient-to-r from-blue-500/10 to-transparent"
+    }
+  },
+  "layout": {
+    "grid_system": {
+      "dashboard": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6",
+      "detail_view": "grid grid-cols-1 lg:grid-cols-3 gap-8",
+      "form_layout": "grid grid-cols-1 md:grid-cols-2 gap-6"
+    },
+    "spacing": {
+      "container_padding": "p-6 md:p-8 lg:p-10",
+      "card_padding": "p-6",
+      "section_gap": "gap-8"
+    },
+    "containers": {
+      "main_wrapper": "min-h-screen bg-background font-sans antialiased",
+      "sidebar_width": "w-64",
+      "collapsed_sidebar_width": "w-16"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 rounded-md font-medium transition-colors",
+      "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80 h-10 px-4 py-2 rounded-md font-medium transition-colors",
+      "ghost": "hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 rounded-md font-medium transition-colors",
+      "destructive": "bg-destructive text-destructive-foreground hover:bg-destructive/90 h-10 px-4 py-2 rounded-md font-medium transition-colors"
+    },
+    "cards": {
+      "base": "rounded-lg border bg-card text-card-foreground shadow-sm",
+      "header": "flex flex-col space-y-1.5 p-6",
+      "content": "p-6 pt-0",
+      "footer": "flex items-center p-6 pt-0"
+    },
+    "inputs": {
+      "base": "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+    },
+    "badges": {
+      "base": "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+      "success": "border-transparent bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-100",
+      "warning": "border-transparent bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-100",
+      "error": "border-transparent bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-100",
+      "info": "border-transparent bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-100"
+    }
+  },
+  "visual_enhancers": {
+    "shadows": {
+      "card": "shadow-sm hover:shadow-md transition-shadow duration-200",
+      "dropdown": "shadow-lg border border-border/50",
+      "modal": "shadow-2xl"
+    },
+    "borders": {
+      "default": "border border-border",
+      "subtle": "border-b border-border/40"
+    },
+    "glassmorphism": {
+      "header": "bg-background/80 backdrop-blur-md border-b border-border/40 sticky top-0 z-50",
+      "overlay": "bg-background/80 backdrop-blur-sm"
+    }
+  },
+  "motion": {
+    "transitions": {
+      "default": "transition-all duration-200 ease-in-out",
+      "hover": "transition-colors duration-200"
+    },
+    "animations": {
+      "fade_in": "animate-in fade-in duration-300",
+      "slide_in": "animate-in slide-in-from-bottom-4 duration-300"
+    }
+  },
+  "accessibility": {
+    "contrast": "Ensure 4.5:1 contrast ratio for normal text",
+    "focus_states": "Visible focus rings on all interactive elements",
+    "aria_labels": "Required for icon-only buttons",
+    "keyboard_nav": "Full keyboard support for menus and forms"
+  },
+  "image_urls": {
+    "login_background": {
+      "url": "https://images.unsplash.com/photo-1764437358274-0cf9ceda78cf?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMG5ldHdvcmslMjB0ZWNobm9sb2d5JTIwYmx1ZSUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzcxNzkxNDU0fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Abstract Network Background",
+      "category": "background"
+    },
+    "empty_states": {
+      "server_room": {
+        "url": "https://images.pexels.com/photos/2881229/pexels-photo-2881229.jpeg",
+        "alt": "Server Room Empty State",
+        "category": "illustration"
+      },
+      "network_switch": {
+        "url": "https://images.pexels.com/photos/6466143/pexels-photo-6466143.jpeg",
+        "alt": "Network Switch Detail",
+        "category": "illustration"
+      }
+    },
+    "avatars": [
+      {
+        "url": "https://images.pexels.com/photos/4057039/pexels-photo-4057039.jpeg",
+        "alt": "User Avatar 1",
+        "category": "avatar"
+      },
+      {
+        "url": "https://images.pexels.com/photos/33871730/pexels-photo-33871730.jpeg",
+        "alt": "User Avatar 2",
+        "category": "avatar"
+      }
+    ],
+    "hardware": {
+      "router": {
+        "url": "https://images.unsplash.com/photo-1484557052118-f32bd25b45b5?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDN8MHwxfHNlYXJjaHwxfHxuZXR3b3JrJTIwcm91dGVyJTIwY2lzY28lMjBoYXJkd2FyZSUyMHdoaXRlJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3NzE3OTE0NjF8MA&ixlib=rb-4.1.0&q=85",
+        "alt": "Network Router",
+        "category": "product"
+      }
+    }
+  },
+  "instructions_to_main_agent": [
+    "Use 'Chivo' for all headings to give a technical, authoritative feel.",
+    "Use 'Inter' for body text to ensure high readability in data-dense tables.",
+    "Implement a 'Sidebar Layout' for the main application shell.",
+    "Use the 'Electric Blue' primary color for main actions (Create Ticket, Save).",
+    "Ensure all tables have sticky headers and hover effects on rows.",
+    "Use 'Badge' components for Ticket Status (Open, In Progress, Resolved).",
+    "Implement Dark Mode support using the 'dark' class strategy in Tailwind.",
+    "Use 'Sonner' for toast notifications.",
+    "Ensure all interactive elements have 'data-testid' attributes.",
+    "Do not use gradients for backgrounds in the main dashboard area; keep it clean and flat.",
+    "Use the provided image URLs for login screens and empty states."
+  ],
+  "universal_guidelines": [
+    "Avoid generic centered layouts; prefer left-aligned, structured grids.",
+    "Use 2-3x more spacing than typical designs for breathing room.",
+    "Every interaction needs micro-animations (hover, focus, active).",
+    "Do not use 'transition: all'; specify properties.",
+    "Use 'sonner' for toasts.",
+    "Components must use named exports.",
+    "Pages must use default exports."
+  ]
+}
