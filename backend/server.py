@@ -837,6 +837,127 @@ class NotificationSettingsUpdate(BaseModel):
     notify_on_sla_risk: Optional[bool] = None
     notify_on_comment_mention: Optional[bool] = None
 
+# ========== CUSTOMER PORTAL MODELS ==========
+class CustomerPortalUser(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    customer_id: str
+    email: EmailStr
+    full_name: str
+    phone: Optional[str] = None
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CustomerPortalUserInDB(CustomerPortalUser):
+    hashed_password: str
+
+class CustomerPortalUserCreate(BaseModel):
+    customer_id: str
+    email: EmailStr
+    password: str
+    full_name: str
+    phone: Optional[str] = None
+
+class CustomerPortalLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class CustomerPortalToken(BaseModel):
+    access_token: str
+    token_type: str
+    user: CustomerPortalUser
+    customer_id: str
+
+class CustomerPortalTicketCreate(BaseModel):
+    title: str
+    description: str
+    category: str
+    priority: str = "medium"
+    asset_id: Optional[str] = None
+
+# ========== IMAP CONFIGURATION MODELS ==========
+class IMAPConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    server: str
+    port: int = 993
+    username: str
+    password: str  # Will be encrypted
+    encryption_type: str = "SSL"
+    folder: str = "INBOX"
+    polling_interval_minutes: int = 5
+    auto_create_ticket: bool = True
+    default_category: str = "email"
+    default_priority: str = "medium"
+    is_active: bool = True
+    last_checked: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class IMAPConfigCreate(BaseModel):
+    name: str
+    server: str
+    port: int = 993
+    username: str
+    password: str
+    encryption_type: str = "SSL"
+    folder: str = "INBOX"
+    polling_interval_minutes: int = 5
+    auto_create_ticket: bool = True
+    default_category: str = "email"
+    default_priority: str = "medium"
+
+class IMAPConfigUpdate(BaseModel):
+    name: Optional[str] = None
+    server: Optional[str] = None
+    port: Optional[int] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
+    encryption_type: Optional[str] = None
+    folder: Optional[str] = None
+    polling_interval_minutes: Optional[int] = None
+    auto_create_ticket: Optional[bool] = None
+    default_category: Optional[str] = None
+    default_priority: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class EmailTicket(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    imap_config_id: str
+    email_message_id: str
+    sender_email: str
+    sender_name: Optional[str] = None
+    subject: str
+    body: str
+    html_body: Optional[str] = None
+    received_date: datetime
+    ticket_id: Optional[str] = None
+    status: str = "pending"  # pending, processed, ignored
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# ========== WHATSAPP MODELS ==========
+class WhatsAppConfig(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    is_connected: bool = False
+    phone_number: Optional[str] = None
+    connection_status: str = "disconnected"
+    last_connected: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class WhatsAppMessage(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    phone_number: str
+    message: str
+    direction: str  # inbound, outbound
+    message_type: str = "text"
+    status: str = "pending"  # pending, sent, delivered, read, failed
+    reference_type: Optional[str] = None
+    reference_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 # Email Templates
 EMAIL_TEMPLATES = {
     "ticket_created": {
