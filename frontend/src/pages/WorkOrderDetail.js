@@ -64,11 +64,108 @@ export default function WorkOrderDetail() {
 
       const photosRes = await axios.get(`${API}/attachments?related_to=work_order&related_id=${id}`, { headers });
       setPhotos(photosRes.data);
+
+      // Fetch parts data
+      const [partsRes, usageRes, reservationsRes] = await Promise.all([
+        axios.get(`${API}/parts`, { headers }),
+        axios.get(`${API}/part-usage?work_order_id=${id}`, { headers }),
+        axios.get(`${API}/part-reservations?work_order_id=${id}`, { headers })
+      ]);
+      setParts(partsRes.data);
+      setPartUsage(usageRes.data);
+      setPartReservations(reservationsRes.data);
     } catch (error) {
       toast.error("İş emri detayları yüklenirken hata oluştu");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddPartUsage = async () => {
+    if (!selectedPart || partQuantity < 1) {
+      toast.error("Lütfen parça ve miktar seçin");
+      return;
+    }
+
+    setAddingPart(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API}/part-usage`, {
+        part_id: selectedPart,
+        work_order_id: id,
+        quantity: partQuantity
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Parça kullanımı eklendi");
+      setPartDialogOpen(false);
+      setSelectedPart("");
+      setPartQuantity(1);
+      fetchWorkOrderDetails();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Parça eklenirken hata oluştu");
+    } finally {
+      setAddingPart(false);
+    }
+  };
+
+  const handleReservePart = async () => {
+    if (!selectedPart || partQuantity < 1) {
+      toast.error("Lütfen parça ve miktar seçin");
+      return;
+    }
+
+    setAddingPart(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API}/part-reservations`, {
+        part_id: selectedPart,
+        work_order_id: id,
+        quantity: partQuantity
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Parça rezerve edildi");
+      setPartDialogOpen(false);
+      setSelectedPart("");
+      setPartQuantity(1);
+      fetchWorkOrderDetails();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Rezervasyon yapılırken hata oluştu");
+    } finally {
+      setAddingPart(false);
+    }
+  };
+
+  const handleUseReservation = async (reservationId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`${API}/part-reservations/${reservationId}/use`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Rezervasyon kullanıldı");
+      fetchWorkOrderDetails();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Rezervasyon kullanılırken hata oluştu");
+    }
+  };
+
+  const handleCancelReservation = async (reservationId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`${API}/part-reservations/${reservationId}/cancel`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Rezervasyon iptal edildi");
+      fetchWorkOrderDetails();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Rezervasyon iptal edilirken hata oluştu");
+    }
+  };
+
+  const getPartInfo = (partId) => {
+    const part = parts.find(p => p.id === partId);
+    return part ? { name: part.name, number: part.part_number } : { name: "Bilinmeyen", number: "" };
   };
 
   const handleChecklistUpdate = async (itemId, completed) => {
