@@ -1,118 +1,99 @@
 # NetworkOps Pro - Teknik Servis Yönetim Sistemi PRD
 
 ## Orijinal Problem Tanımı
-Network cihazları (switch, router vb.) için kapsamlı teknik servis yönetim yazılımı.
+Network cihazları (switch, router, firewall, access point vb.) için kapsamlı teknik servis yönetim yazılımı.
 
-## Temel Özellikler (MVP)
-1. Müşteri ve Sözleşme Yönetimi ✅
-2. Cihaz Envanteri (Seri No bazlı) ✅
-3. Ticket Yönetimi ✅
-4. İş Emri / Saha Servis Yönetimi ✅
-5. SLA Takibi ve Bildirimler ✅
-6. Parça / Stok Yönetimi ✅
-7. RMA / Garanti Süreci ✅
-8. Temel Raporlama ✅
-9. İletişim ve Bildirimler ✅
+## MVP Tamamlanma Durumu: %100 ✅
 
-## Tamamlanan Özellikler
+### Tüm Fonksiyonel Modüller
+1. ✅ Müşteri & Sözleşme Yönetimi
+2. ✅ Cihaz Envanteri & Seri No Takibi
+3. ✅ Ticket (Arıza Kaydı) Yönetimi
+4. ✅ SLA Yönetimi (Profiller, İş Saatleri, Sayaç Kontrolü)
+5. ✅ İş Emri & Saha Servis Yönetimi
+6. ✅ Parça / Depo Yönetimi
+7. ✅ RMA / Garanti Süreci
+8. ✅ Dashboard & Raporlama
+9. ✅ Rol & Yetkilendirme
+10. ✅ E-posta & SMS Bildirimleri
 
-### Aralık 2025 - İletişim ve Bildirimler
-- [x] E-posta şablonları (ticket açıldı/atandı/kapanış)
-- [x] SMS entegrasyonu (NetGSM SDK)
-- [x] Müşteriye durum güncellemeleri (otomatik)
-- [x] İç ekip uyarıları (SLA risk)
-- [x] Ticket içi yorumlar ve mention (@)
-- [x] Bildirim ayarları sayfası
-- [x] Bildirim geçmişi görüntüleme
-- [x] Test e-posta/SMS gönderimi
-- [x] SLA risk kontrolü ve otomatik bildirim
+## Tamamlanan Özellikler (Detay)
 
-### Aralık 2025 - Parça / Depo / Sarf Yönetimi
-- [x] Parça kartları + stok seviyeleri
-- [x] İş emrine parça talebi / rezervasyon
-- [x] Stok giriş-çıkış (iş emrine bağlanarak)
-- [x] Seri no'lu parça takibi (SFP, PSU, cihaz vb.)
-- [x] İade / değişim / hurda akışı
-- [x] Min stok uyarıları
-- [x] Stok hareketleri geçmişi
+### SLA Yönetimi
+- [x] SLA profilleri (P1/P2/P3/P4) tanımlama
+- [x] İlk yanıt ve çözüm süreleri
+- [x] İş saatleri takvimi (günlük saatler, tatiller)
+- [x] SLA sayacı durdurma/başlatma (müşteri bekliyor vb.)
+- [x] SLA deadline otomatik uzatma
 
-### Aralık 2025 - İş Emri ve Saha Servis Yönetimi
-- [x] Ticket → İş emri üretimi (uzaktan/yerinde/atölye)
-- [x] Teknisyen/ekip atama
-- [x] Randevu planlama + takvim görünümü
-- [x] Check-list / adım adım servis prosedürü
-- [x] Servis formu (yapılan işlem, süre, fotoğraf)
-- [x] Müşteri onayı / imza (opsiyon)
+### Cihaz Envanteri
+- [x] Seri no bazlı kayıt
+- [x] Garanti bitiş tarihi takibi
+- [x] Support sözleşme bitiş takibi
+- [x] Yaklaşan garanti bitişi uyarıları
+- [x] Detaylı cihaz geçmişi (ticket, iş emri, RMA)
 
-### Önceki İmplementasyonlar
-- [x] JWT tabanlı kimlik doğrulama
-- [x] Gelişmiş CRM (müşteri detayları, iletişim kişileri, lokasyonlar, döküman arşivi)
-- [x] Bilet yönetimi (timeline, yorumlar, dosya yükleme)
-- [x] Raporlama modülü (grafikler ve analizler)
-- [x] Modern flat tasarım UI
+### Rol & Yetkilendirme
+- [x] 4 sistem rolü (Admin, Müdür, Teknisyen, İzleyici)
+- [x] 29 detaylı izin tanımı
+- [x] Modül bazlı yetki grupları
+- [x] Özel rol oluşturma
 
-## Bekleyen/Planlanan Görevler
+### İletişim & Bildirimler
+- [x] E-posta şablonları (ticket açıldı/atandı/kapanış/SLA risk)
+- [x] SMS entegrasyonu (NetGSM)
+- [x] @mention sistemi (yorumlarda)
+- [x] Otomatik bildirimler
 
-### P1: Gelişmiş SLA ve Sözleşme Kuralları
-- [ ] SLA profilleri (P1/P2/P3)
-- [ ] İş saatleri takvimleri
-- [ ] SLA sayacını durdurup başlatma (müşteri beklemede vb.)
+### Parça & Depo
+- [x] Parça kartları
+- [x] Stok giriş/çıkış
+- [x] İş emrine parça bağlama
+- [x] Seri no'lu takip
+- [x] Kritik stok uyarıları
 
-### P2: Gelişmiş Cihaz Envanteri
-- [ ] Detaylı cihaz geçmişi (tüm ticket'lar, bakımlar, parça değişimleri)
-- [ ] Garanti ve destek sözleşmesi bitiş tarihi takibi
-
-### Gelecek Görevler
-- [ ] RMA/Garanti detaylı iş akışı
-- [ ] Teknisyen için takvim bazlı planlama
-- [ ] Müşteri self-servis portalı
-- [ ] ERP entegrasyonu
-- [ ] Mail-to-Ticket
-- [ ] WhatsApp Business API entegrasyonu
-- [ ] Monitoring araçları (Zabbix/PRTG) entegrasyonu
+### İş Emri
+- [x] Ticket'tan iş emri (uzaktan/yerinde/atölye)
+- [x] Teknisyen atama
+- [x] Takvim görünümü
+- [x] Checklist prosedürü
+- [x] Servis formu + fotoğraf
+- [x] Müşteri imzası
 
 ## Teknik Mimari
 
 ### Backend
-- FastAPI, Pydantic
-- MongoDB (pymongo motor)
+- FastAPI, Pydantic, MongoDB
 - JWT kimlik doğrulama
-- Resend (e-posta)
-- NetGSM SDK (SMS)
+- Resend (e-posta), NetGSM (SMS)
 
 ### Frontend
-- React 19
-- React Router
-- Tailwind CSS
-- Shadcn/UI
-- Recharts
-- Axios
+- React 19, Tailwind CSS, Shadcn/UI
+- React Router, Axios, Recharts
 
 ### API Endpoint'leri
 - `/api/auth/*` - Kimlik doğrulama
-- `/api/customers/*` - Müşteri yönetimi
-- `/api/contacts/*` - İletişim kişileri
-- `/api/locations/*` - Lokasyonlar
-- `/api/tickets/*` - Ticket yönetimi
-- `/api/work-orders/*` - İş emri yönetimi
-- `/api/assets/*` - Cihaz envanteri
-- `/api/parts/*` - Parça yönetimi
+- `/api/customers/*` - Müşteriler
+- `/api/tickets/*` - Ticketlar
+- `/api/work-orders/*` - İş emirleri
+- `/api/assets/*` - Cihazlar
+- `/api/parts/*` - Parçalar
 - `/api/stock-movements/*` - Stok hareketleri
-- `/api/part-reservations/*` - Parça rezervasyonları
-- `/api/notifications/*` - Bildirim yönetimi
-- `/api/rma/*` - RMA işlemleri
-- `/api/reports/*` - Raporlama
-- `/api/attachments/*` - Dosya yönetimi
+- `/api/sla-profiles/*` - SLA profilleri
+- `/api/business-hours/*` - İş saatleri
+- `/api/roles/*` - Roller
+- `/api/permissions` - İzinler
+- `/api/notifications/*` - Bildirimler
+- `/api/reports/*` - Raporlar
+- `/api/rma/*` - RMA
 
-## Entegrasyon Notları
-
-### E-posta (Resend)
-- RESEND_API_KEY environment variable gerekli
-- SENDER_EMAIL: Gönderen e-posta adresi
-
-### SMS (NetGSM)
-- Bildirim ayarları sayfasından yapılandırılır
-- netgsm_username, netgsm_password, netgsm_header gerekli
+## FAZ-2 (Opsiyonel Gelecek Geliştirmeler)
+- [ ] Müşteri self-service portalı
+- [ ] ERP entegrasyonu
+- [ ] SNMP/Monitoring entegrasyonu
+- [ ] WhatsApp Business API
+- [ ] Mail-to-Ticket
+- [ ] Offline mobil uygulama
 
 ## Test Bilgileri
 - Email: test@network.com
