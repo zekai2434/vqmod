@@ -282,7 +282,17 @@ class PartReservation(BaseModel):
     work_order_id: str
     quantity: int
     status: str = "reserved"
+    serial_numbers: List[str] = []
+    reserved_by: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    used_at: Optional[datetime] = None
+    cancelled_at: Optional[datetime] = None
+
+class PartReservationCreate(BaseModel):
+    part_id: str
+    work_order_id: str
+    quantity: int
+    serial_numbers: List[str] = []
 
 class Part(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -290,23 +300,116 @@ class Part(BaseModel):
     part_number: str
     name: str
     category: str
+    description: Optional[str] = None
+    brand: Optional[str] = None
+    model: Optional[str] = None
     quantity: int = 0
     reserved_quantity: int = 0
     min_stock: int = 5
+    max_stock: Optional[int] = None
     unit_price: float = 0.0
+    currency: str = "TRY"
     supplier: Optional[str] = None
+    supplier_part_number: Optional[str] = None
+    location: Optional[str] = None
+    shelf: Optional[str] = None
     has_serial: bool = False
+    is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class PartCreate(BaseModel):
     part_number: str
     name: str
     category: str
+    description: Optional[str] = None
+    brand: Optional[str] = None
+    model: Optional[str] = None
     quantity: int = 0
     min_stock: int = 5
+    max_stock: Optional[int] = None
     unit_price: float = 0.0
+    currency: str = "TRY"
     supplier: Optional[str] = None
+    supplier_part_number: Optional[str] = None
+    location: Optional[str] = None
+    shelf: Optional[str] = None
     has_serial: bool = False
+
+class PartUpdate(BaseModel):
+    name: Optional[str] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+    brand: Optional[str] = None
+    model: Optional[str] = None
+    min_stock: Optional[int] = None
+    max_stock: Optional[int] = None
+    unit_price: Optional[float] = None
+    currency: Optional[str] = None
+    supplier: Optional[str] = None
+    supplier_part_number: Optional[str] = None
+    location: Optional[str] = None
+    shelf: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class SerializedPart(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    part_id: str
+    serial_number: str
+    status: str = "in_stock"
+    condition: str = "new"
+    purchase_date: Optional[str] = None
+    warranty_end: Optional[str] = None
+    supplier: Optional[str] = None
+    purchase_price: Optional[float] = None
+    notes: Optional[str] = None
+    current_location: Optional[str] = None
+    assigned_to_work_order: Optional[str] = None
+    assigned_to_asset: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SerializedPartCreate(BaseModel):
+    part_id: str
+    serial_number: str
+    condition: str = "new"
+    purchase_date: Optional[str] = None
+    warranty_end: Optional[str] = None
+    supplier: Optional[str] = None
+    purchase_price: Optional[float] = None
+    notes: Optional[str] = None
+    current_location: Optional[str] = None
+
+class StockMovement(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    part_id: str
+    movement_type: str
+    quantity: int
+    serial_numbers: List[str] = []
+    reference_type: Optional[str] = None
+    reference_id: Optional[str] = None
+    reason: Optional[str] = None
+    notes: Optional[str] = None
+    unit_cost: Optional[float] = None
+    supplier: Optional[str] = None
+    invoice_number: Optional[str] = None
+    created_by: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class StockMovementCreate(BaseModel):
+    part_id: str
+    movement_type: str
+    quantity: int
+    serial_numbers: List[str] = []
+    reference_type: Optional[str] = None
+    reference_id: Optional[str] = None
+    reason: Optional[str] = None
+    notes: Optional[str] = None
+    unit_cost: Optional[float] = None
+    supplier: Optional[str] = None
+    invoice_number: Optional[str] = None
 
 class PartUsage(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -316,6 +419,9 @@ class PartUsage(BaseModel):
     ticket_id: str
     quantity: int
     serial_numbers: List[str] = []
+    usage_type: str = "consumed"
+    return_reason: Optional[str] = None
+    condition_on_return: Optional[str] = None
     created_by: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -324,6 +430,31 @@ class PartUsageCreate(BaseModel):
     work_order_id: str
     quantity: int
     serial_numbers: List[str] = []
+    usage_type: str = "consumed"
+
+class PartReturn(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    part_id: str
+    work_order_id: Optional[str] = None
+    quantity: int
+    serial_numbers: List[str] = []
+    return_type: str = "return_to_stock"
+    condition: str = "good"
+    reason: Optional[str] = None
+    notes: Optional[str] = None
+    created_by: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class PartReturnCreate(BaseModel):
+    part_id: str
+    work_order_id: Optional[str] = None
+    quantity: int
+    serial_numbers: List[str] = []
+    return_type: str = "return_to_stock"
+    condition: str = "good"
+    reason: Optional[str] = None
+    notes: Optional[str] = None
 
 class RMA(BaseModel):
     model_config = ConfigDict(extra="ignore")
