@@ -1085,6 +1085,9 @@ async def update_ticket(ticket_id: str, update: TicketUpdate, current_user: User
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     
+    old_status = ticket.get('status')
+    old_assigned = ticket.get('assigned_to')
+    
     update_data = {k: v for k, v in update.model_dump().items() if v is not None}
     update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
     
@@ -1102,6 +1105,47 @@ async def update_ticket(ticket_id: str, update: TicketUpdate, current_user: User
         updated_ticket['sla_deadline'] = datetime.fromisoformat(updated_ticket['sla_deadline'])
     if updated_ticket.get('resolved_at') and isinstance(updated_ticket['resolved_at'], str):
         updated_ticket['resolved_at'] = datetime.fromisoformat(updated_ticket['resolved_at'])
+    
+    # Send notifications based on update type
+    settings = await get_notification_settings()
+    customer = await db.customers.find_one({"id": ticket['customer_id']}, {"_id": 0})
+    
+    if customer:
+        # Ticket assigned notification
+        if settings.notify_on_ticket_assigned and update.assigned_to and update.assigned_to != old_assigned:
+            assignee = await db.users.find_one({"id": update.assigned_to}, {"_id": 0})
+            if assignee:
+                template_data = {
+                    "ticket_number": ticket['ticket_number'],
+                    "title": ticket['title'],
+                    "customer_name": customer.get('name', 'Değerli Müşteri'),
+                    "assignee_name": assignee.get('full_name', 'Bilinmeyen')
+                }
+                asyncio.create_task(send_notification(
+                    "ticket_assigned",
+                    template_data,
+                    recipient_email=customer.get('email'),
+                    recipient_phone=customer.get('phone'),
+                    reference_type="ticket",
+                    reference_id=ticket_id
+                ))
+        
+        # Ticket resolved notification
+        if settings.notify_on_ticket_resolved and update.status in ["resolved", "closed"] and old_status not in ["resolved", "closed"]:
+            template_data = {
+                "ticket_number": ticket['ticket_number'],
+                "title": ticket['title'],
+                "customer_name": customer.get('name', 'Değerli Müşteri')
+            }
+            asyncio.create_task(send_notification(
+                "ticket_resolved",
+                template_data,
+                recipient_email=customer.get('email'),
+                recipient_phone=customer.get('phone'),
+                reference_type="ticket",
+                reference_id=ticket_id
+            ))
+    
     return Ticket(**updated_ticket)
 
 @api_router.post("/tickets/{ticket_id}/comments", response_model=TicketComment)
@@ -1114,6 +1158,32 @@ async def add_ticket_comment(ticket_id: str, comment: TicketCommentCreate, curre
     doc = comment_obj.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
     await db.ticket_comments.insert_one(doc)
+    
+    # Check for mentions and send notifications
+    settings = await get_notification_settings()
+    if settings.notify_on_comment_mention:
+        mentions = extract_mentions(comment.comment)
+        if mentions:
+            ticket = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
+            users = await db.users.find({}, {"_id": 0}).to_list(1000)
+            
+            for mention in mentions:
+                mentioned_user = next((u for u in users if u.get('full_name', '').lower().replace(' ', '_') == mention.lower() or u.get('email', '').split('@')[0].lower() == mention.lower()), None)
+                if mentioned_user:
+                    template_data = {
+                        "ticket_number": ticket['ticket_number'] if ticket else ticket_id,
+                        "mentioned_by": current_user.full_name,
+                        "comment": comment.comment[:200] + "..." if len(comment.comment) > 200 else comment.comment
+                    }
+                    asyncio.create_task(send_notification(
+                        "comment_mention",
+                        template_data,
+                        recipient_email=mentioned_user.get('email'),
+                        recipient_id=mentioned_user.get('id'),
+                        reference_type="ticket",
+                        reference_id=ticket_id
+                    ))
+    
     return comment_obj
 
 @api_router.get("/tickets/{ticket_id}/comments", response_model=List[TicketComment])
