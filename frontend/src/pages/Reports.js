@@ -377,7 +377,10 @@ export default function Reports() {
                       dataKey="value"
                     >
                       {agingChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={[FLAT_COLORS.green, FLAT_COLORS.blue, FLAT_COLORS.orange, FLAT_COLORS.amber, FLAT_COLORS.red][index]} 
+                        />
                       ))}
                     </Pie>
                     <Tooltip />
