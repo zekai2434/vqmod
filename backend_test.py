@@ -570,6 +570,13 @@ def main():
         # User management
         ("Create Additional User", tester.test_create_additional_user),
         ("Get Users", tester.test_get_users),
+        
+        # File attachment tests
+        ("Upload Text Attachment", tester.test_upload_attachment),
+        ("Upload Image Attachment", tester.test_upload_image_attachment),
+        ("Get Ticket Attachments", tester.test_get_attachments),
+        ("Upload Large File", tester.test_large_file_upload),
+        ("Upload Multiple Files", tester.test_multiple_attachments),
     ]
     
     failed_tests = []
