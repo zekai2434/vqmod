@@ -342,11 +342,18 @@ export default function Reports() {
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={mttrByPriorityData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="hours" fill="#0052CC" name="Saat" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="name" stroke="#6b7280" style={{fontSize: '12px'}} />
+                    <YAxis stroke="#6b7280" style={{fontSize: '12px'}} />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: '#fff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                      }}
+                    />
+                    <Bar dataKey="hours" fill={FLAT_COLORS.purple} name="Saat" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
