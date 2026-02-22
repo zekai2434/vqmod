@@ -2982,6 +2982,657 @@ async def get_asset_history(asset_id: str, current_user: User = Depends(get_curr
     
     return history
 
+# ========== CUSTOMER PORTAL ENDPOINTS ==========
+
+async def get_current_portal_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get current customer portal user from JWT token"""
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        user_type: str = payload.get("type")
+        
+        if user_id is None or user_type != "portal":
+            raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    user = await db.portal_users.find_one({"id": user_id}, {"_id": 0})
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    return CustomerPortalUser(**user)
+
+@api_router.post("/portal/register", response_model=CustomerPortalUser)
+async def register_portal_user(user: CustomerPortalUserCreate):
+    """Register a new customer portal user"""
+    # Check if customer exists
+    customer = await db.customers.find_one({"id": user.customer_id}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Müşteri bulunamadı")
+    
+    # Check if email already registered
+    existing = await db.portal_users.find_one({"email": user.email}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu e-posta adresi zaten kayıtlı")
+    
+    hashed_password = get_password_hash(user.password)
+    user_dict = user.model_dump()
+    user_dict.pop("password")
+    user_obj = CustomerPortalUserInDB(**user_dict, hashed_password=hashed_password)
+    
+    doc = user_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.portal_users.insert_one(doc)
+    
+    return CustomerPortalUser(**user_obj.model_dump())
+
+@api_router.post("/portal/login", response_model=CustomerPortalToken)
+async def login_portal_user(user_login: CustomerPortalLogin):
+    """Login customer portal user"""
+    user = await db.portal_users.find_one({"email": user_login.email}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=401, detail="Geçersiz kimlik bilgileri")
+    
+    if not verify_password(user_login.password, user["hashed_password"]):
+        raise HTTPException(status_code=401, detail="Geçersiz kimlik bilgileri")
+    
+    if not user.get("is_active", True):
+        raise HTTPException(status_code=401, detail="Hesabınız devre dışı bırakılmış")
+    
+    access_token = create_access_token(data={"sub": user["id"], "type": "portal"})
+    user_obj = CustomerPortalUser(**user)
+    return CustomerPortalToken(
+        access_token=access_token,
+        token_type="bearer",
+        user=user_obj,
+        customer_id=user["customer_id"]
+    )
+
+@api_router.get("/portal/me", response_model=CustomerPortalUser)
+async def get_portal_me(current_user: CustomerPortalUser = Depends(get_current_portal_user)):
+    """Get current portal user info"""
+    return current_user
+
+@api_router.get("/portal/tickets")
+async def get_portal_tickets(current_user: CustomerPortalUser = Depends(get_current_portal_user)):
+    """Get tickets for customer portal user"""
+    tickets = await db.tickets.find(
+        {"customer_id": current_user.customer_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    for t in tickets:
+        if isinstance(t.get('created_at'), str):
+            t['created_at'] = datetime.fromisoformat(t['created_at'])
+        if isinstance(t.get('updated_at'), str):
+            t['updated_at'] = datetime.fromisoformat(t['updated_at'])
+        if t.get('sla_deadline') and isinstance(t['sla_deadline'], str):
+            t['sla_deadline'] = datetime.fromisoformat(t['sla_deadline'])
+        if t.get('resolved_at') and isinstance(t['resolved_at'], str):
+            t['resolved_at'] = datetime.fromisoformat(t['resolved_at'])
+    
+    return tickets
+
+@api_router.get("/portal/tickets/{ticket_id}")
+async def get_portal_ticket(ticket_id: str, current_user: CustomerPortalUser = Depends(get_current_portal_user)):
+    """Get specific ticket for customer portal user"""
+    ticket = await db.tickets.find_one(
+        {"id": ticket_id, "customer_id": current_user.customer_id},
+        {"_id": 0}
+    )
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket bulunamadı")
+    
+    if isinstance(ticket.get('created_at'), str):
+        ticket['created_at'] = datetime.fromisoformat(ticket['created_at'])
+    if isinstance(ticket.get('updated_at'), str):
+        ticket['updated_at'] = datetime.fromisoformat(ticket['updated_at'])
+    
+    return ticket
+
+@api_router.post("/portal/tickets")
+async def create_portal_ticket(ticket: CustomerPortalTicketCreate, current_user: CustomerPortalUser = Depends(get_current_portal_user)):
+    """Create a new ticket from customer portal"""
+    ticket_count = await db.tickets.count_documents({})
+    ticket_number = f"TKT-{ticket_count + 1:05d}"
+    
+    sla_hours = {"low": 48, "medium": 24, "high": 8, "critical": 4}
+    hours = sla_hours.get(ticket.priority, 24)
+    sla_deadline = datetime.now(timezone.utc) + timedelta(hours=hours)
+    
+    ticket_obj = Ticket(
+        ticket_number=ticket_number,
+        customer_id=current_user.customer_id,
+        asset_id=ticket.asset_id,
+        title=ticket.title,
+        description=ticket.description,
+        category=ticket.category,
+        priority=ticket.priority,
+        channel="portal",
+        created_by=current_user.id,
+        sla_deadline=sla_deadline
+    )
+    
+    doc = ticket_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    doc['updated_at'] = doc['updated_at'].isoformat()
+    if doc['sla_deadline']:
+        doc['sla_deadline'] = doc['sla_deadline'].isoformat()
+    
+    await db.tickets.insert_one(doc)
+    
+    # Send notification
+    settings = await get_notification_settings()
+    if settings.notify_on_ticket_created:
+        customer = await db.customers.find_one({"id": current_user.customer_id}, {"_id": 0})
+        if customer:
+            priority_labels = {"low": "Düşük", "medium": "Orta", "high": "Yüksek", "critical": "Kritik"}
+            template_data = {
+                "ticket_number": ticket_number,
+                "title": ticket.title,
+                "priority": priority_labels.get(ticket.priority, ticket.priority),
+                "customer_name": customer.get('name', 'Değerli Müşteri')
+            }
+            asyncio.create_task(send_notification(
+                "ticket_created",
+                template_data,
+                recipient_email=customer.get('email'),
+                recipient_phone=customer.get('phone'),
+                reference_type="ticket",
+                reference_id=ticket_obj.id
+            ))
+    
+    return ticket_obj
+
+@api_router.get("/portal/tickets/{ticket_id}/comments")
+async def get_portal_ticket_comments(ticket_id: str, current_user: CustomerPortalUser = Depends(get_current_portal_user)):
+    """Get comments for a ticket (excluding internal comments)"""
+    ticket = await db.tickets.find_one(
+        {"id": ticket_id, "customer_id": current_user.customer_id},
+        {"_id": 0}
+    )
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket bulunamadı")
+    
+    comments = await db.ticket_comments.find(
+        {"ticket_id": ticket_id, "is_internal": False},
+        {"_id": 0}
+    ).sort("created_at", 1).to_list(1000)
+    
+    for c in comments:
+        if isinstance(c['created_at'], str):
+            c['created_at'] = datetime.fromisoformat(c['created_at'])
+    
+    return comments
+
+@api_router.post("/portal/tickets/{ticket_id}/comments")
+async def add_portal_ticket_comment(ticket_id: str, comment: TicketCommentCreate, current_user: CustomerPortalUser = Depends(get_current_portal_user)):
+    """Add a comment to a ticket from portal"""
+    ticket = await db.tickets.find_one(
+        {"id": ticket_id, "customer_id": current_user.customer_id},
+        {"_id": 0}
+    )
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket bulunamadı")
+    
+    comment_obj = TicketComment(
+        ticket_id=ticket_id,
+        user_id=current_user.id,
+        user_name=current_user.full_name,
+        comment=comment.comment,
+        is_internal=False
+    )
+    
+    doc = comment_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.ticket_comments.insert_one(doc)
+    
+    return comment_obj
+
+@api_router.get("/portal/assets")
+async def get_portal_assets(current_user: CustomerPortalUser = Depends(get_current_portal_user)):
+    """Get assets for customer portal user"""
+    assets = await db.assets.find(
+        {"customer_id": current_user.customer_id, "is_spare": False},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    for a in assets:
+        if isinstance(a['created_at'], str):
+            a['created_at'] = datetime.fromisoformat(a['created_at'])
+    
+    return assets
+
+@api_router.get("/portal/customer")
+async def get_portal_customer(current_user: CustomerPortalUser = Depends(get_current_portal_user)):
+    """Get customer info for portal user"""
+    customer = await db.customers.find_one(
+        {"id": current_user.customer_id},
+        {"_id": 0}
+    )
+    
+    if not customer:
+        raise HTTPException(status_code=404, detail="Müşteri bulunamadı")
+    
+    if isinstance(customer['created_at'], str):
+        customer['created_at'] = datetime.fromisoformat(customer['created_at'])
+    
+    return customer
+
+# ========== IMAP EMAIL INTEGRATION ENDPOINTS ==========
+
+# Encryption key for IMAP passwords
+ENCRYPTION_KEY = os.environ.get('ENCRYPTION_KEY', Fernet.generate_key().decode())
+
+def encrypt_password(password: str) -> str:
+    """Encrypt password for secure storage"""
+    try:
+        f = Fernet(ENCRYPTION_KEY.encode() if isinstance(ENCRYPTION_KEY, str) else ENCRYPTION_KEY)
+        return f.encrypt(password.encode()).decode()
+    except Exception:
+        # Fallback: base64 encoding if Fernet key is invalid
+        return base64.b64encode(password.encode()).decode()
+
+def decrypt_password(encrypted_password: str) -> str:
+    """Decrypt password from storage"""
+    try:
+        f = Fernet(ENCRYPTION_KEY.encode() if isinstance(ENCRYPTION_KEY, str) else ENCRYPTION_KEY)
+        return f.decrypt(encrypted_password.encode()).decode()
+    except Exception:
+        # Fallback: base64 decoding
+        try:
+            return base64.b64decode(encrypted_password.encode()).decode()
+        except:
+            return encrypted_password
+
+def decode_email_header(header: str) -> str:
+    """Decode email header handling different encodings"""
+    if not header:
+        return ""
+    try:
+        decoded_parts = decode_header(header)
+        decoded_string = ""
+        for part, encoding in decoded_parts:
+            if isinstance(part, bytes):
+                decoded_string += part.decode(encoding or "utf-8", errors="ignore")
+            else:
+                decoded_string += str(part)
+        return decoded_string
+    except Exception:
+        return str(header)
+
+def parse_email_sender(sender: str) -> Tuple[str, Optional[str]]:
+    """Extract email and name from sender field"""
+    import re
+    match = re.match(r"^([^<]*)<([^>]+)>$", sender.strip())
+    if match:
+        name = match.group(1).strip() or None
+        email_addr = match.group(2).strip()
+        return email_addr, name
+    return sender.strip(), None
+
+def extract_email_body(message) -> Tuple[str, Optional[str]]:
+    """Extract plain text and HTML body from email"""
+    body_text = ""
+    body_html = ""
+    
+    if message.is_multipart():
+        for part in message.walk():
+            content_type = part.get_content_type()
+            content_disposition = str(part.get("Content-Disposition", ""))
+            
+            if "attachment" not in content_disposition:
+                try:
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        charset = part.get_content_charset() or "utf-8"
+                        decoded = payload.decode(charset, errors="ignore")
+                        if content_type == "text/plain":
+                            body_text = decoded
+                        elif content_type == "text/html":
+                            body_html = decoded
+                except:
+                    pass
+    else:
+        try:
+            payload = message.get_payload(decode=True)
+            if payload:
+                charset = message.get_content_charset() or "utf-8"
+                body_text = payload.decode(charset, errors="ignore")
+        except:
+            pass
+    
+    return body_text or body_html, body_html
+
+async def fetch_emails_from_imap(config: dict) -> List[dict]:
+    """Fetch unread emails from IMAP server"""
+    emails = []
+    connection = None
+    
+    try:
+        decrypted_password = decrypt_password(config.get("password", ""))
+        
+        if config.get("encryption_type", "SSL").upper() == "SSL":
+            connection = imaplib.IMAP4_SSL(config["server"], config.get("port", 993))
+        else:
+            connection = imaplib.IMAP4(config["server"], config.get("port", 143))
+            connection.starttls()
+        
+        connection.login(config["username"], decrypted_password)
+        connection.select(config.get("folder", "INBOX"))
+        
+        status, message_ids = connection.search(None, "UNSEEN")
+        
+        if status == "OK" and message_ids[0]:
+            for msg_id in message_ids[0].split()[:50]:  # Limit to 50 emails
+                try:
+                    status, msg_data = connection.fetch(msg_id, "(RFC822)")
+                    
+                    if status == "OK":
+                        email_message = email_lib.message_from_bytes(msg_data[0][1])
+                        
+                        subject = decode_email_header(email_message.get("Subject", "No Subject"))
+                        sender = email_message.get("From", "")
+                        received_date = email_message.get("Date", "")
+                        message_id_header = email_message.get("Message-ID", str(msg_id.decode()))
+                        
+                        sender_email, sender_name = parse_email_sender(sender)
+                        body_text, body_html = extract_email_body(email_message)
+                        
+                        # Parse date
+                        try:
+                            from email.utils import parsedate_to_datetime
+                            parsed_date = parsedate_to_datetime(received_date)
+                        except:
+                            parsed_date = datetime.now(timezone.utc)
+                        
+                        emails.append({
+                            "message_id": message_id_header,
+                            "imap_message_id": msg_id.decode(),
+                            "sender_email": sender_email,
+                            "sender_name": sender_name,
+                            "subject": subject,
+                            "body": body_text,
+                            "html_body": body_html,
+                            "received_date": parsed_date
+                        })
+                        
+                        # Mark as read
+                        connection.store(msg_id, "+FLAGS", "\\Seen")
+                except Exception as e:
+                    logging.error(f"Error processing email {msg_id}: {str(e)}")
+    
+    except Exception as e:
+        logging.error(f"IMAP connection error: {str(e)}")
+    
+    finally:
+        if connection:
+            try:
+                connection.close()
+                connection.logout()
+            except:
+                pass
+    
+    return emails
+
+async def process_imap_emails():
+    """Background task to process emails from all active IMAP configs"""
+    try:
+        configs = await db.imap_configs.find({"is_active": True}, {"_id": 0}).to_list(100)
+        
+        for config in configs:
+            try:
+                emails = await fetch_emails_from_imap(config)
+                
+                for email_data in emails:
+                    # Check if email already processed
+                    existing = await db.email_tickets.find_one(
+                        {"email_message_id": email_data["message_id"]},
+                        {"_id": 0}
+                    )
+                    
+                    if not existing:
+                        # Store email record
+                        email_ticket = EmailTicket(
+                            imap_config_id=config["id"],
+                            email_message_id=email_data["message_id"],
+                            sender_email=email_data["sender_email"],
+                            sender_name=email_data.get("sender_name"),
+                            subject=email_data["subject"],
+                            body=email_data["body"],
+                            html_body=email_data.get("html_body"),
+                            received_date=email_data["received_date"]
+                        )
+                        
+                        doc = email_ticket.model_dump()
+                        doc['created_at'] = doc['created_at'].isoformat()
+                        doc['received_date'] = doc['received_date'].isoformat()
+                        
+                        # Create ticket if auto_create_ticket is enabled
+                        if config.get("auto_create_ticket", True):
+                            # Find customer by email
+                            customer = await db.customers.find_one(
+                                {"email": email_data["sender_email"]},
+                                {"_id": 0}
+                            )
+                            
+                            if customer:
+                                ticket_count = await db.tickets.count_documents({})
+                                ticket_number = f"TKT-{ticket_count + 1:05d}"
+                                
+                                priority = config.get("default_priority", "medium")
+                                sla_hours = {"low": 48, "medium": 24, "high": 8, "critical": 4}
+                                hours = sla_hours.get(priority, 24)
+                                sla_deadline = datetime.now(timezone.utc) + timedelta(hours=hours)
+                                
+                                ticket_obj = Ticket(
+                                    ticket_number=ticket_number,
+                                    customer_id=customer["id"],
+                                    title=email_data["subject"][:200],
+                                    description=email_data["body"][:5000],
+                                    category=config.get("default_category", "email"),
+                                    priority=priority,
+                                    channel="email",
+                                    created_by="system",
+                                    sla_deadline=sla_deadline
+                                )
+                                
+                                ticket_doc = ticket_obj.model_dump()
+                                ticket_doc['created_at'] = ticket_doc['created_at'].isoformat()
+                                ticket_doc['updated_at'] = ticket_doc['updated_at'].isoformat()
+                                if ticket_doc['sla_deadline']:
+                                    ticket_doc['sla_deadline'] = ticket_doc['sla_deadline'].isoformat()
+                                
+                                await db.tickets.insert_one(ticket_doc)
+                                
+                                doc['ticket_id'] = ticket_obj.id
+                                doc['status'] = 'processed'
+                                
+                                logging.info(f"Created ticket {ticket_number} from email")
+                        
+                        await db.email_tickets.insert_one(doc)
+                
+                # Update last_checked
+                await db.imap_configs.update_one(
+                    {"id": config["id"]},
+                    {"$set": {"last_checked": datetime.now(timezone.utc).isoformat()}}
+                )
+            
+            except Exception as e:
+                logging.error(f"Error processing IMAP config {config.get('id')}: {str(e)}")
+    
+    except Exception as e:
+        logging.error(f"Error in process_imap_emails: {str(e)}")
+
+@api_router.post("/imap-configs", response_model=IMAPConfig)
+async def create_imap_config(config: IMAPConfigCreate, current_user: User = Depends(get_current_user)):
+    """Create a new IMAP configuration"""
+    config_dict = config.model_dump()
+    config_dict["password"] = encrypt_password(config.password)
+    
+    config_obj = IMAPConfig(**config_dict)
+    doc = config_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    
+    await db.imap_configs.insert_one(doc)
+    
+    # Return without password
+    config_obj.password = "********"
+    return config_obj
+
+@api_router.get("/imap-configs")
+async def get_imap_configs(current_user: User = Depends(get_current_user)):
+    """Get all IMAP configurations"""
+    configs = await db.imap_configs.find({}, {"_id": 0}).to_list(100)
+    
+    for c in configs:
+        c["password"] = "********"
+        if isinstance(c.get('created_at'), str):
+            c['created_at'] = datetime.fromisoformat(c['created_at'])
+        if c.get('last_checked') and isinstance(c['last_checked'], str):
+            c['last_checked'] = datetime.fromisoformat(c['last_checked'])
+    
+    return configs
+
+@api_router.get("/imap-configs/{config_id}")
+async def get_imap_config(config_id: str, current_user: User = Depends(get_current_user)):
+    """Get specific IMAP configuration"""
+    config = await db.imap_configs.find_one({"id": config_id}, {"_id": 0})
+    
+    if not config:
+        raise HTTPException(status_code=404, detail="IMAP yapılandırması bulunamadı")
+    
+    config["password"] = "********"
+    return config
+
+@api_router.patch("/imap-configs/{config_id}")
+async def update_imap_config(config_id: str, update: IMAPConfigUpdate, current_user: User = Depends(get_current_user)):
+    """Update IMAP configuration"""
+    existing = await db.imap_configs.find_one({"id": config_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="IMAP yapılandırması bulunamadı")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    
+    if "password" in update_data:
+        update_data["password"] = encrypt_password(update_data["password"])
+    
+    await db.imap_configs.update_one({"id": config_id}, {"$set": update_data})
+    
+    updated = await db.imap_configs.find_one({"id": config_id}, {"_id": 0})
+    updated["password"] = "********"
+    return updated
+
+@api_router.delete("/imap-configs/{config_id}")
+async def delete_imap_config(config_id: str, current_user: User = Depends(get_current_user)):
+    """Delete IMAP configuration"""
+    result = await db.imap_configs.delete_one({"id": config_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="IMAP yapılandırması bulunamadı")
+    
+    return {"message": "IMAP yapılandırması silindi"}
+
+@api_router.post("/imap-configs/{config_id}/test")
+async def test_imap_config(config_id: str, current_user: User = Depends(get_current_user)):
+    """Test IMAP connection"""
+    config = await db.imap_configs.find_one({"id": config_id}, {"_id": 0})
+    
+    if not config:
+        raise HTTPException(status_code=404, detail="IMAP yapılandırması bulunamadı")
+    
+    try:
+        decrypted_password = decrypt_password(config.get("password", ""))
+        
+        if config.get("encryption_type", "SSL").upper() == "SSL":
+            connection = imaplib.IMAP4_SSL(config["server"], config.get("port", 993))
+        else:
+            connection = imaplib.IMAP4(config["server"], config.get("port", 143))
+            connection.starttls()
+        
+        connection.login(config["username"], decrypted_password)
+        connection.select(config.get("folder", "INBOX"))
+        
+        # Get mailbox status
+        status, data = connection.status(config.get("folder", "INBOX"), "(MESSAGES UNSEEN)")
+        
+        connection.close()
+        connection.logout()
+        
+        return {
+            "success": True,
+            "message": "IMAP bağlantısı başarılı",
+            "mailbox_status": data[0].decode() if data else None
+        }
+    
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"IMAP bağlantı hatası: {str(e)}"
+        }
+
+@api_router.post("/imap-configs/check-emails")
+async def trigger_email_check(background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user)):
+    """Manually trigger email check for all active IMAP configs"""
+    background_tasks.add_task(process_imap_emails)
+    return {"message": "E-posta kontrolü başlatıldı"}
+
+@api_router.get("/email-tickets")
+async def get_email_tickets(
+    status: Optional[str] = None,
+    imap_config_id: Optional[str] = None,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user)
+):
+    """Get email tickets"""
+    query = {}
+    if status:
+        query["status"] = status
+    if imap_config_id:
+        query["imap_config_id"] = imap_config_id
+    
+    tickets = await db.email_tickets.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    for t in tickets:
+        if isinstance(t.get('created_at'), str):
+            t['created_at'] = datetime.fromisoformat(t['created_at'])
+        if isinstance(t.get('received_date'), str):
+            t['received_date'] = datetime.fromisoformat(t['received_date'])
+    
+    return tickets
+
+# ========== PORTAL USER MANAGEMENT (Admin) ==========
+
+@api_router.get("/portal-users")
+async def get_portal_users(customer_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    """Get all portal users (admin only)"""
+    query = {}
+    if customer_id:
+        query["customer_id"] = customer_id
+    
+    users = await db.portal_users.find(query, {"_id": 0, "hashed_password": 0}).to_list(1000)
+    
+    for u in users:
+        if isinstance(u.get('created_at'), str):
+            u['created_at'] = datetime.fromisoformat(u['created_at'])
+    
+    return users
+
+@api_router.patch("/portal-users/{user_id}/toggle-active")
+async def toggle_portal_user_active(user_id: str, current_user: User = Depends(get_current_user)):
+    """Toggle portal user active status"""
+    user = await db.portal_users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Portal kullanıcısı bulunamadı")
+    
+    new_status = not user.get("is_active", True)
+    await db.portal_users.update_one({"id": user_id}, {"$set": {"is_active": new_status}})
+    
+    return {"message": f"Kullanıcı {'aktif' if new_status else 'devre dışı'}", "is_active": new_status}
+
 app.include_router(api_router)
 
 app.add_middleware(
