@@ -65,8 +65,12 @@ export default function CustomerList() {
         email: "",
         phone: "",
         address: "",
+        tax_number: "",
+        tax_office: "",
         contract_type: "standard",
-        sla_level: "standard"
+        sla_level: "standard",
+        tags: [],
+        notes: ""
       });
       fetchCustomers();
     } catch (error) {
