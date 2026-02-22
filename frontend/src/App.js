@@ -1,40 +1,23 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import LoginPage from "@/pages/LoginPage";
+import DashboardLayout from "@/components/DashboardLayout";
+import Dashboard from "@/pages/Dashboard";
+import TicketList from "@/pages/TicketList";
+import TicketDetail from "@/pages/TicketDetail";
+import NewTicket from "@/pages/NewTicket";
+import CustomerList from "@/pages/CustomerList";
+import AssetList from "@/pages/AssetList";
+import PartList from "@/pages/PartList";
+import RMAList from "@/pages/RMAList";
+import WorkOrderList from "@/pages/WorkOrderList";
+import UserList from "@/pages/UserList";
+import { Toaster } from "sonner";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
-
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
+const PrivateRoute = ({ children }) => {
+  const token = localStorage.getItem('token');
+  return token ? children : <Navigate to="/login" />;
 };
 
 function App() {
@@ -42,11 +25,26 @@ function App() {
     <div className="App">
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={
+            <PrivateRoute>
+              <DashboardLayout />
+            </PrivateRoute>
+          }>
+            <Route index element={<Dashboard />} />
+            <Route path="tickets" element={<TicketList />} />
+            <Route path="tickets/:id" element={<TicketDetail />} />
+            <Route path="tickets/new" element={<NewTicket />} />
+            <Route path="customers" element={<CustomerList />} />
+            <Route path="assets" element={<AssetList />} />
+            <Route path="parts" element={<PartList />} />
+            <Route path="rma" element={<RMAList />} />
+            <Route path="work-orders" element={<WorkOrderList />} />
+            <Route path="users" element={<UserList />} />
           </Route>
         </Routes>
       </BrowserRouter>
+      <Toaster position="top-right" richColors />
     </div>
   );
 }
