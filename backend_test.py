@@ -358,6 +358,174 @@ class NetworkServiceAPITester:
         )
         return success
 
+    def test_upload_attachment(self):
+        """Test uploading file attachment"""
+        if 'ticket' not in self.created_ids:
+            print("❌ Cannot upload attachment - no ticket ID available")
+            return False
+            
+        # Create a simple test file content (base64 encoded)
+        test_content = "Bu bir test dosyasıdır. Test attachment functionality."
+        file_data_base64 = base64.b64encode(test_content.encode('utf-8')).decode('utf-8')
+        
+        attachment_data = {
+            "related_to": "ticket",
+            "related_id": self.created_ids['ticket'],
+            "filename": "test_document.txt",
+            "file_type": "text/plain",
+            "file_size": len(test_content),
+            "file_data": file_data_base64
+        }
+        
+        success, response = self.run_test(
+            "Upload Attachment",
+            "POST",
+            "attachments",
+            200,
+            data=attachment_data
+        )
+        if success and 'id' in response:
+            self.created_ids['attachment'] = response['id']
+            return True
+        return False
+
+    def test_upload_image_attachment(self):
+        """Test uploading image attachment"""
+        if 'ticket' not in self.created_ids:
+            print("❌ Cannot upload image attachment - no ticket ID available")
+            return False
+            
+        # Create a simple test image content (simulated base64)
+        # This is a minimal PNG header + data (not a real image but valid base64)
+        test_image_data = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
+        
+        attachment_data = {
+            "related_to": "ticket", 
+            "related_id": self.created_ids['ticket'],
+            "filename": "test_image.png",
+            "file_type": "image/png",
+            "file_size": len(base64.b64decode(test_image_data)),
+            "file_data": test_image_data
+        }
+        
+        success, response = self.run_test(
+            "Upload Image Attachment",
+            "POST",
+            "attachments",
+            200,
+            data=attachment_data
+        )
+        if success and 'id' in response:
+            self.created_ids['image_attachment'] = response['id']
+            return True
+        return False
+
+    def test_get_attachments(self):
+        """Test getting attachments for a ticket"""
+        if 'ticket' not in self.created_ids:
+            print("❌ Cannot get attachments - no ticket ID available")
+            return False
+            
+        params = {
+            "related_to": "ticket",
+            "related_id": self.created_ids['ticket']
+        }
+        
+        success, response = self.run_test(
+            "Get Ticket Attachments",
+            "GET",
+            "attachments",
+            200,
+            params=params
+        )
+        
+        if success:
+            print(f"   Found {len(response)} attachments")
+            for attachment in response:
+                print(f"   - {attachment.get('filename')} ({attachment.get('file_type')})")
+        
+        return success
+
+    def test_large_file_upload(self):
+        """Test uploading larger file (simulating size limits)"""
+        if 'ticket' not in self.created_ids:
+            print("❌ Cannot upload large file - no ticket ID available")
+            return False
+            
+        # Create a larger test file content (around 1MB)
+        large_content = "A" * (1024 * 1024)  # 1MB of 'A' characters
+        file_data_base64 = base64.b64encode(large_content.encode('utf-8')).decode('utf-8')
+        
+        attachment_data = {
+            "related_to": "ticket",
+            "related_id": self.created_ids['ticket'],
+            "filename": "large_test_file.txt",
+            "file_type": "text/plain",
+            "file_size": len(large_content),
+            "file_data": file_data_base64
+        }
+        
+        success, response = self.run_test(
+            "Upload Large File",
+            "POST",
+            "attachments",
+            200,
+            data=attachment_data
+        )
+        return success
+
+    def test_multiple_attachments(self):
+        """Test uploading multiple attachments to same ticket"""
+        if 'ticket' not in self.created_ids:
+            print("❌ Cannot upload multiple attachments - no ticket ID available")
+            return False
+            
+        # Upload multiple different file types
+        files_to_upload = [
+            {
+                "filename": "config.json",
+                "file_type": "application/json",
+                "content": '{"config": "test", "version": "1.0"}'
+            },
+            {
+                "filename": "log.txt",
+                "file_type": "text/plain", 
+                "content": "2024-01-01 10:00:00 - System started\n2024-01-01 10:01:00 - Error occurred"
+            },
+            {
+                "filename": "report.csv",
+                "file_type": "text/csv",
+                "content": "Date,Status,Notes\n2024-01-01,OK,Normal operation\n2024-01-02,ERROR,Port failure"
+            }
+        ]
+        
+        uploaded_count = 0
+        for file_info in files_to_upload:
+            file_data_base64 = base64.b64encode(file_info["content"].encode('utf-8')).decode('utf-8')
+            
+            attachment_data = {
+                "related_to": "ticket",
+                "related_id": self.created_ids['ticket'],
+                "filename": file_info["filename"],
+                "file_type": file_info["file_type"],
+                "file_size": len(file_info["content"]),
+                "file_data": file_data_base64
+            }
+            
+            success, response = self.run_test(
+                f"Upload {file_info['filename']}",
+                "POST",
+                "attachments",
+                200,
+                data=attachment_data
+            )
+            
+            if success:
+                uploaded_count += 1
+        
+        print(f"   Successfully uploaded {uploaded_count}/{len(files_to_upload)} files")
+        return uploaded_count == len(files_to_upload)
+
 def main():
     print("🚀 Starting Network Service API Tests...")
     print("=" * 60)
