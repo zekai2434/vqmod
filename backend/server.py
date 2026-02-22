@@ -3633,6 +3633,171 @@ async def toggle_portal_user_active(user_id: str, current_user: User = Depends(g
     
     return {"message": f"Kullanıcı {'aktif' if new_status else 'devre dışı'}", "is_active": new_status}
 
+# ========== WHATSAPP INTEGRATION ENDPOINTS ==========
+
+WHATSAPP_SERVICE_URL = os.environ.get('WHATSAPP_SERVICE_URL', 'http://localhost:3002')
+
+class WhatsAppSendMessage(BaseModel):
+    phone_number: str
+    message: str
+
+class WhatsAppIncomingMessage(BaseModel):
+    phone_number: str
+    message: str
+    message_id: str
+    timestamp: int
+
+@api_router.get("/whatsapp/status")
+async def get_whatsapp_status(current_user: User = Depends(get_current_user)):
+    """Get WhatsApp connection status"""
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(f"{WHATSAPP_SERVICE_URL}/status")
+            return response.json()
+    except Exception as e:
+        return {"connected": False, "status": "service_unavailable", "error": str(e)}
+
+@api_router.get("/whatsapp/qr")
+async def get_whatsapp_qr(current_user: User = Depends(get_current_user)):
+    """Get WhatsApp QR code for authentication"""
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(f"{WHATSAPP_SERVICE_URL}/qr")
+            return response.json()
+    except Exception as e:
+        return {"qr": None, "status": "service_unavailable", "error": str(e)}
+
+@api_router.post("/whatsapp/send")
+async def send_whatsapp_message(msg: WhatsAppSendMessage, current_user: User = Depends(get_current_user)):
+    """Send WhatsApp message"""
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{WHATSAPP_SERVICE_URL}/send",
+                json={"phone_number": msg.phone_number, "message": msg.message}
+            )
+            result = response.json()
+            
+            # Log the message
+            wa_message = WhatsAppMessage(
+                phone_number=msg.phone_number,
+                message=msg.message,
+                direction="outbound",
+                status="sent" if result.get("success") else "failed"
+            )
+            doc = wa_message.model_dump()
+            doc['created_at'] = doc['created_at'].isoformat()
+            await db.whatsapp_messages.insert_one(doc)
+            
+            return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@api_router.post("/whatsapp/incoming")
+async def handle_whatsapp_incoming(msg: WhatsAppIncomingMessage):
+    """Handle incoming WhatsApp message (called by WhatsApp service)"""
+    try:
+        # Log the incoming message
+        wa_message = WhatsAppMessage(
+            phone_number=msg.phone_number,
+            message=msg.message,
+            direction="inbound",
+            status="received"
+        )
+        doc = wa_message.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        await db.whatsapp_messages.insert_one(doc)
+        
+        # Try to find customer by phone
+        customer = await db.customers.find_one({"phone": {"$regex": msg.phone_number[-10:]}}, {"_id": 0})
+        
+        # Auto-reply based on message content
+        message_lower = msg.message.lower()
+        
+        if any(word in message_lower for word in ["destek", "yardım", "help", "sorun", "arıza"]):
+            if customer:
+                return {
+                    "reply": f"Merhaba {customer.get('name', '')}! Destek talebinizi aldık. En kısa sürede size dönüş yapacağız. Acil durumlar için 0850 XXX XX XX numarasını arayabilirsiniz."
+                }
+            else:
+                return {
+                    "reply": "Merhaba! Destek talebinizi aldık. Müşteri kaydınız bulunamadı. Lütfen firma adınızı ve iletişim bilgilerinizi paylaşır mısınız?"
+                }
+        
+        elif any(word in message_lower for word in ["durum", "ticket", "talep"]):
+            if customer:
+                # Get open tickets for customer
+                tickets = await db.tickets.find(
+                    {"customer_id": customer["id"], "status": {"$nin": ["resolved", "closed"]}},
+                    {"_id": 0}
+                ).to_list(5)
+                
+                if tickets:
+                    ticket_list = "\n".join([f"• {t['ticket_number']}: {t['title'][:30]}..." for t in tickets])
+                    return {
+                        "reply": f"Açık talepleriniz:\n{ticket_list}\n\nDetay için ticket numarasını yazabilirsiniz."
+                    }
+                else:
+                    return {"reply": "Şu anda açık destek talebiniz bulunmuyor."}
+            else:
+                return {"reply": "Müşteri kaydınız bulunamadı. Lütfen firma adınızı paylaşır mısınız?"}
+        
+        else:
+            return {
+                "reply": "NetworkOps Destek Hattına hoş geldiniz!\n\n'destek' - Yeni talep oluştur\n'durum' - Açık talepleri görüntüle\n\nNasıl yardımcı olabiliriz?"
+            }
+    
+    except Exception as e:
+        logging.error(f"WhatsApp incoming error: {str(e)}")
+        return {"reply": None}
+
+@api_router.post("/whatsapp/disconnect")
+async def disconnect_whatsapp(current_user: User = Depends(get_current_user)):
+    """Disconnect WhatsApp"""
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(f"{WHATSAPP_SERVICE_URL}/disconnect")
+            return response.json()
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@api_router.post("/whatsapp/reconnect")
+async def reconnect_whatsapp(current_user: User = Depends(get_current_user)):
+    """Reconnect WhatsApp"""
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(f"{WHATSAPP_SERVICE_URL}/reconnect")
+            return response.json()
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@api_router.get("/whatsapp/messages")
+async def get_whatsapp_messages(
+    phone_number: Optional[str] = None,
+    direction: Optional[str] = None,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user)
+):
+    """Get WhatsApp message history"""
+    query = {}
+    if phone_number:
+        query["phone_number"] = {"$regex": phone_number}
+    if direction:
+        query["direction"] = direction
+    
+    messages = await db.whatsapp_messages.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    for m in messages:
+        if isinstance(m.get('created_at'), str):
+            m['created_at'] = datetime.fromisoformat(m['created_at'])
+    
+    return messages
+
 app.include_router(api_router)
 
 app.add_middleware(
