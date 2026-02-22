@@ -7,7 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Clock, User, Calendar, AlertCircle, MessageSquare, Paperclip, Send, Upload, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Clock, User, Calendar, AlertCircle, MessageSquare, Paperclip, Send, Upload, Image as ImageIcon, Wrench, MapPin, Monitor, Building2, Plus } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import FileUpload, { ImageViewer } from "@/components/FileUpload";
 import axios from "axios";
 import { toast } from "sonner";
@@ -34,6 +36,16 @@ export default function TicketDetail() {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [viewerImages, setViewerImages] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [createWODialogOpen, setCreateWODialogOpen] = useState(false);
+  const [woFormData, setWoFormData] = useState({
+    work_type: "onsite",
+    assigned_technician: "",
+    scheduled_date: "",
+    scheduled_time: "",
+    notes: ""
+  });
+  const [creatingWO, setCreatingWO] = useState(false);
 
   useEffect(() => {
     fetchTicketDetails();
@@ -63,6 +75,9 @@ export default function TicketDetail() {
 
       const workOrdersRes = await axios.get(`${API}/work-orders?ticket_id=${id}`, { headers });
       setWorkOrders(workOrdersRes.data);
+
+      const usersRes = await axios.get(`${API}/users`, { headers });
+      setUsers(usersRes.data);
     } catch (error) {
       toast.error("Ticket detayları yüklenirken hata oluştu");
     } finally {
@@ -201,6 +216,82 @@ export default function TicketDetail() {
     if (!ticket?.sla_deadline) return false;
     return new Date(ticket.sla_deadline) < new Date() && ticket.status !== 'resolved' && ticket.status !== 'closed';
   };
+
+  const handleCreateWorkOrder = async () => {
+    if (!woFormData.assigned_technician) {
+      toast.error("Lütfen teknisyen seçin");
+      return;
+    }
+
+    setCreatingWO(true);
+    try {
+      const token = localStorage.getItem('token');
+      const scheduledDateTime = woFormData.scheduled_date + (woFormData.scheduled_time ? `T${woFormData.scheduled_time}` : '');
+      
+      const defaultChecklist = [
+        { id: crypto.randomUUID(), task: "Müşteri ile randevu onayı", completed: false },
+        { id: crypto.randomUUID(), task: "Cihaz fiziksel kontrolü", completed: false },
+        { id: crypto.randomUUID(), task: "Arıza tespiti ve analiz", completed: false },
+        { id: crypto.randomUUID(), task: "Onarım/değişim işlemi", completed: false },
+        { id: crypto.randomUUID(), task: "Fonksiyon testleri", completed: false },
+        { id: crypto.randomUUID(), task: "Müşteri eğitimi ve bilgilendirme", completed: false },
+        { id: crypto.randomUUID(), task: "Servis formunun doldurulması", completed: false }
+      ];
+
+      await axios.post(`${API}/work-orders`, {
+        ticket_id: id,
+        assigned_technician: woFormData.assigned_technician,
+        work_type: woFormData.work_type,
+        scheduled_date: scheduledDateTime || null,
+        notes: woFormData.notes,
+        checklist: defaultChecklist
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      toast.success("İş emri oluşturuldu");
+      setCreateWODialogOpen(false);
+      setWoFormData({ work_type: "onsite", assigned_technician: "", scheduled_date: "", scheduled_time: "", notes: "" });
+      fetchTicketDetails();
+    } catch (error) {
+      toast.error("İş emri oluşturulurken hata oluştu");
+    } finally {
+      setCreatingWO(false);
+    }
+  };
+
+  const getWorkTypeBadge = (type) => {
+    const config = {
+      onsite: { icon: MapPin, label: "Yerinde", color: "bg-blue-100 text-blue-700" },
+      remote: { icon: Monitor, label: "Uzaktan", color: "bg-purple-100 text-purple-700" },
+      workshop: { icon: Building2, label: "Atölye", color: "bg-orange-100 text-orange-700" }
+    };
+    const { icon: Icon, label, color } = config[type] || config.onsite;
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${color}`}>
+        <Icon className="w-3 h-3" />
+        {label}
+      </span>
+    );
+  };
+
+  const getWOStatusBadge = (status) => {
+    const variants = {
+      scheduled: { variant: "info", label: "Planlandı" },
+      in_progress: { variant: "warning", label: "Devam Ediyor" },
+      completed: { variant: "success", label: "Tamamlandı" },
+      cancelled: { variant: "outline", label: "İptal Edildi" }
+    };
+    const config = variants[status] || variants.scheduled;
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const getTechnicianName = (userId) => {
+    const user = users.find(u => u.id === userId);
+    return user ? user.full_name : 'Bilinmeyen';
+  };
+
+  const technicians = users.filter(u => u.role === 'technician' || u.role === 'admin');
 
   if (loading) {
     return <div className="flex items-center justify-center h-96">Yükleniyor...</div>;
@@ -454,25 +545,158 @@ export default function TicketDetail() {
             </TabsContent>
 
             <TabsContent value="workorders" className="mt-4">
+              <div className="mb-4">
+                <Dialog open={createWODialogOpen} onOpenChange={setCreateWODialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button data-testid="create-work-order-btn">
+                      <Plus className="w-4 h-4 mr-2" />
+                      İş Emri Oluştur
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>Bu Ticket İçin İş Emri Oluştur</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>İş Tipi *</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { value: "onsite", icon: MapPin, label: "Yerinde" },
+                            { value: "remote", icon: Monitor, label: "Uzaktan" },
+                            { value: "workshop", icon: Building2, label: "Atölye" }
+                          ].map(({ value, icon: Icon, label }) => (
+                            <div
+                              key={value}
+                              onClick={() => setWoFormData({...woFormData, work_type: value})}
+                              className={`p-3 border rounded-lg cursor-pointer transition-all text-center ${
+                                woFormData.work_type === value 
+                                  ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                                  : 'hover:border-primary/50'
+                              }`}
+                              data-testid={`wo-type-${value}`}
+                            >
+                              <Icon className={`w-5 h-5 mx-auto mb-1 ${woFormData.work_type === value ? 'text-primary' : 'text-muted-foreground'}`} />
+                              <p className="text-xs font-medium">{label}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Teknisyen *</Label>
+                        <Select value={woFormData.assigned_technician} onValueChange={(v) => setWoFormData({...woFormData, assigned_technician: v})}>
+                          <SelectTrigger data-testid="wo-tech-select">
+                            <SelectValue placeholder="Teknisyen seçin" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {technicians.map(u => (
+                              <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label>Randevu Tarihi</Label>
+                          <Input
+                            type="date"
+                            data-testid="wo-sched-date"
+                            value={woFormData.scheduled_date}
+                            onChange={(e) => setWoFormData({...woFormData, scheduled_date: e.target.value})}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Saat</Label>
+                          <Input
+                            type="time"
+                            data-testid="wo-sched-time"
+                            value={woFormData.scheduled_time}
+                            onChange={(e) => setWoFormData({...woFormData, scheduled_time: e.target.value})}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Notlar</Label>
+                        <Textarea
+                          data-testid="wo-notes"
+                          value={woFormData.notes}
+                          onChange={(e) => setWoFormData({...woFormData, notes: e.target.value})}
+                          rows={2}
+                          placeholder="Özel talimatlar..."
+                        />
+                      </div>
+
+                      <div className="flex gap-2 pt-2">
+                        <Button onClick={handleCreateWorkOrder} disabled={creatingWO} data-testid="confirm-create-wo">
+                          {creatingWO ? "Oluşturuluyor..." : "Oluştur"}
+                        </Button>
+                        <Button variant="outline" onClick={() => setCreateWODialogOpen(false)}>İptal</Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
               {workOrders.length === 0 ? (
                 <Card className="p-8">
-                  <p className="text-center text-muted-foreground">İş emri yok</p>
+                  <div className="text-center">
+                    <Wrench className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground">Bu ticket için henüz iş emri yok</p>
+                    <p className="text-sm text-muted-foreground mt-1">Yukarıdaki butonu kullanarak iş emri oluşturun</p>
+                  </div>
                 </Card>
               ) : (
                 <div className="grid gap-3">
-                  {workOrders.map((wo) => (
-                    <Card key={wo.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/work-orders`)}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">{wo.work_type === 'onsite' ? 'Yerinde Servis' : wo.work_type === 'remote' ? 'Uzaktan' : 'Atölye'}</p>
-                            <p className="text-sm text-muted-foreground">Durum: {wo.status}</p>
+                  {workOrders.map((wo) => {
+                    const completedTasks = wo.checklist?.filter(item => item.completed).length || 0;
+                    const totalTasks = wo.checklist?.length || 0;
+                    
+                    return (
+                      <Card 
+                        key={wo.id} 
+                        className="cursor-pointer hover:shadow-md transition-shadow" 
+                        onClick={() => navigate(`/work-orders/${wo.id}`)}
+                        data-testid={`wo-card-${wo.id}`}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {getWOStatusBadge(wo.status)}
+                                {getWorkTypeBadge(wo.work_type)}
+                              </div>
+                              <div className="flex items-center gap-4 text-sm">
+                                <div className="flex items-center gap-1">
+                                  <User className="w-4 h-4 text-muted-foreground" />
+                                  <span>{getTechnicianName(wo.assigned_technician)}</span>
+                                </div>
+                                {wo.scheduled_date && (
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                                    <span>{new Date(wo.scheduled_date).toLocaleDateString('tr-TR')}</span>
+                                  </div>
+                                )}
+                              </div>
+                              {totalTasks > 0 && (
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden max-w-32">
+                                    <div 
+                                      className="h-full bg-green-500" 
+                                      style={{width: `${(completedTasks / totalTasks) * 100}%`}}
+                                    />
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">{completedTasks}/{totalTasks}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <Badge>{wo.status}</Badge>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </TabsContent>
