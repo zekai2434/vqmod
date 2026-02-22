@@ -817,19 +817,382 @@ async def update_work_order(work_order_id: str, update: WorkOrderUpdate, current
 
 @api_router.post("/parts", response_model=Part)
 async def create_part(part: PartCreate, current_user: User = Depends(get_current_user)):
+    existing = await db.parts.find_one({"part_number": part.part_number}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Part number already exists")
+    
     part_obj = Part(**part.model_dump())
     doc = part_obj.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
+    doc['updated_at'] = doc['updated_at'].isoformat()
     await db.parts.insert_one(doc)
     return part_obj
 
 @api_router.get("/parts", response_model=List[Part])
-async def get_parts(current_user: User = Depends(get_current_user)):
-    parts = await db.parts.find({}, {"_id": 0}).to_list(1000)
+async def get_parts(
+    category: Optional[str] = None,
+    low_stock: Optional[bool] = None,
+    has_serial: Optional[bool] = None,
+    is_active: Optional[bool] = True,
+    current_user: User = Depends(get_current_user)
+):
+    query = {}
+    if category:
+        query["category"] = category
+    if has_serial is not None:
+        query["has_serial"] = has_serial
+    if is_active is not None:
+        query["is_active"] = is_active
+    
+    parts = await db.parts.find(query, {"_id": 0}).to_list(1000)
+    
+    result = []
     for p in parts:
         if isinstance(p['created_at'], str):
             p['created_at'] = datetime.fromisoformat(p['created_at'])
-    return parts
+        if isinstance(p.get('updated_at'), str):
+            p['updated_at'] = datetime.fromisoformat(p['updated_at'])
+        
+        if low_stock and p['quantity'] > p['min_stock']:
+            continue
+        result.append(p)
+    
+    return result
+
+@api_router.get("/parts/{part_id}", response_model=Part)
+async def get_part(part_id: str, current_user: User = Depends(get_current_user)):
+    part = await db.parts.find_one({"id": part_id}, {"_id": 0})
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found")
+    if isinstance(part['created_at'], str):
+        part['created_at'] = datetime.fromisoformat(part['created_at'])
+    if isinstance(part.get('updated_at'), str):
+        part['updated_at'] = datetime.fromisoformat(part['updated_at'])
+    return Part(**part)
+
+@api_router.patch("/parts/{part_id}", response_model=Part)
+async def update_part(part_id: str, update: PartUpdate, current_user: User = Depends(get_current_user)):
+    part = await db.parts.find_one({"id": part_id}, {"_id": 0})
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.parts.update_one({"id": part_id}, {"$set": update_data})
+    
+    updated_part = await db.parts.find_one({"id": part_id}, {"_id": 0})
+    if isinstance(updated_part['created_at'], str):
+        updated_part['created_at'] = datetime.fromisoformat(updated_part['created_at'])
+    if isinstance(updated_part.get('updated_at'), str):
+        updated_part['updated_at'] = datetime.fromisoformat(updated_part['updated_at'])
+    return Part(**updated_part)
+
+@api_router.get("/parts/categories/list")
+async def get_part_categories(current_user: User = Depends(get_current_user)):
+    parts = await db.parts.find({}, {"category": 1, "_id": 0}).to_list(1000)
+    categories = list(set(p['category'] for p in parts if p.get('category')))
+    return sorted(categories)
+
+@api_router.post("/parts/{part_id}/serials", response_model=SerializedPart)
+async def add_serialized_part(part_id: str, serial: SerializedPartCreate, current_user: User = Depends(get_current_user)):
+    part = await db.parts.find_one({"id": part_id}, {"_id": 0})
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found")
+    if not part.get('has_serial'):
+        raise HTTPException(status_code=400, detail="This part does not track serial numbers")
+    
+    existing = await db.serialized_parts.find_one({"serial_number": serial.serial_number}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Serial number already exists")
+    
+    serial_obj = SerializedPart(**serial.model_dump())
+    doc = serial_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    doc['updated_at'] = doc['updated_at'].isoformat()
+    await db.serialized_parts.insert_one(doc)
+    
+    await db.parts.update_one({"id": part_id}, {"$inc": {"quantity": 1}})
+    
+    return serial_obj
+
+@api_router.get("/parts/{part_id}/serials", response_model=List[SerializedPart])
+async def get_serialized_parts(part_id: str, status: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {"part_id": part_id}
+    if status:
+        query["status"] = status
+    
+    serials = await db.serialized_parts.find(query, {"_id": 0}).to_list(1000)
+    for s in serials:
+        if isinstance(s['created_at'], str):
+            s['created_at'] = datetime.fromisoformat(s['created_at'])
+        if isinstance(s.get('updated_at'), str):
+            s['updated_at'] = datetime.fromisoformat(s['updated_at'])
+    return serials
+
+@api_router.get("/serialized-parts", response_model=List[SerializedPart])
+async def get_all_serialized_parts(status: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {}
+    if status:
+        query["status"] = status
+    
+    serials = await db.serialized_parts.find(query, {"_id": 0}).to_list(1000)
+    for s in serials:
+        if isinstance(s['created_at'], str):
+            s['created_at'] = datetime.fromisoformat(s['created_at'])
+        if isinstance(s.get('updated_at'), str):
+            s['updated_at'] = datetime.fromisoformat(s['updated_at'])
+    return serials
+
+@api_router.post("/stock-movements", response_model=StockMovement)
+async def create_stock_movement(movement: StockMovementCreate, current_user: User = Depends(get_current_user)):
+    part = await db.parts.find_one({"id": movement.part_id}, {"_id": 0})
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found")
+    
+    if movement.movement_type in ["out", "usage", "scrap", "return_to_vendor"]:
+        if part["quantity"] < movement.quantity:
+            raise HTTPException(status_code=400, detail="Insufficient stock")
+        quantity_change = -movement.quantity
+    elif movement.movement_type in ["in", "purchase", "return_from_field", "adjustment_plus"]:
+        quantity_change = movement.quantity
+    elif movement.movement_type == "adjustment_minus":
+        if part["quantity"] < movement.quantity:
+            raise HTTPException(status_code=400, detail="Insufficient stock for adjustment")
+        quantity_change = -movement.quantity
+    else:
+        raise HTTPException(status_code=400, detail="Invalid movement type")
+    
+    movement_obj = StockMovement(**movement.model_dump(), created_by=current_user.id)
+    doc = movement_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.stock_movements.insert_one(doc)
+    
+    await db.parts.update_one(
+        {"id": movement.part_id},
+        {
+            "$inc": {"quantity": quantity_change},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+        }
+    )
+    
+    if part.get('has_serial') and movement.serial_numbers:
+        if movement.movement_type in ["out", "usage", "scrap"]:
+            await db.serialized_parts.update_many(
+                {"serial_number": {"$in": movement.serial_numbers}},
+                {"$set": {"status": "used" if movement.movement_type == "usage" else movement.movement_type, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+        elif movement.movement_type in ["return_from_field"]:
+            await db.serialized_parts.update_many(
+                {"serial_number": {"$in": movement.serial_numbers}},
+                {"$set": {"status": "in_stock", "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+    
+    return movement_obj
+
+@api_router.get("/stock-movements", response_model=List[StockMovement])
+async def get_stock_movements(
+    part_id: Optional[str] = None,
+    movement_type: Optional[str] = None,
+    reference_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    query = {}
+    if part_id:
+        query["part_id"] = part_id
+    if movement_type:
+        query["movement_type"] = movement_type
+    if reference_id:
+        query["reference_id"] = reference_id
+    
+    movements = await db.stock_movements.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    for m in movements:
+        if isinstance(m['created_at'], str):
+            m['created_at'] = datetime.fromisoformat(m['created_at'])
+    return movements
+
+@api_router.post("/part-reservations", response_model=PartReservation)
+async def create_part_reservation(reservation: PartReservationCreate, current_user: User = Depends(get_current_user)):
+    part = await db.parts.find_one({"id": reservation.part_id}, {"_id": 0})
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found")
+    
+    available = part["quantity"] - part.get("reserved_quantity", 0)
+    if available < reservation.quantity:
+        raise HTTPException(status_code=400, detail=f"Insufficient available stock. Available: {available}")
+    
+    reservation_obj = PartReservation(**reservation.model_dump(), reserved_by=current_user.id)
+    doc = reservation_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    if doc.get('used_at'):
+        doc['used_at'] = doc['used_at'].isoformat()
+    if doc.get('cancelled_at'):
+        doc['cancelled_at'] = doc['cancelled_at'].isoformat()
+    await db.part_reservations.insert_one(doc)
+    
+    await db.parts.update_one(
+        {"id": reservation.part_id},
+        {"$inc": {"reserved_quantity": reservation.quantity}}
+    )
+    
+    return reservation_obj
+
+@api_router.get("/part-reservations", response_model=List[PartReservation])
+async def get_part_reservations(
+    work_order_id: Optional[str] = None,
+    part_id: Optional[str] = None,
+    status: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    query = {}
+    if work_order_id:
+        query["work_order_id"] = work_order_id
+    if part_id:
+        query["part_id"] = part_id
+    if status:
+        query["status"] = status
+    
+    reservations = await db.part_reservations.find(query, {"_id": 0}).to_list(1000)
+    for r in reservations:
+        if isinstance(r['created_at'], str):
+            r['created_at'] = datetime.fromisoformat(r['created_at'])
+        if r.get('used_at') and isinstance(r['used_at'], str):
+            r['used_at'] = datetime.fromisoformat(r['used_at'])
+        if r.get('cancelled_at') and isinstance(r['cancelled_at'], str):
+            r['cancelled_at'] = datetime.fromisoformat(r['cancelled_at'])
+    return reservations
+
+@api_router.patch("/part-reservations/{reservation_id}/use")
+async def use_part_reservation(reservation_id: str, current_user: User = Depends(get_current_user)):
+    reservation = await db.part_reservations.find_one({"id": reservation_id}, {"_id": 0})
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    
+    if reservation["status"] != "reserved":
+        raise HTTPException(status_code=400, detail="Reservation is not in reserved status")
+    
+    await db.part_reservations.update_one(
+        {"id": reservation_id},
+        {"$set": {"status": "used", "used_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    await db.parts.update_one(
+        {"id": reservation["part_id"]},
+        {"$inc": {"quantity": -reservation["quantity"], "reserved_quantity": -reservation["quantity"]}}
+    )
+    
+    work_order = await db.work_orders.find_one({"id": reservation["work_order_id"]}, {"_id": 0})
+    if work_order:
+        usage_obj = PartUsage(
+            part_id=reservation["part_id"],
+            work_order_id=reservation["work_order_id"],
+            ticket_id=work_order["ticket_id"],
+            quantity=reservation["quantity"],
+            serial_numbers=reservation.get("serial_numbers", []),
+            created_by=current_user.id
+        )
+        doc = usage_obj.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        await db.part_usage.insert_one(doc)
+    
+    return {"status": "success", "message": "Reservation used successfully"}
+
+@api_router.patch("/part-reservations/{reservation_id}/cancel")
+async def cancel_part_reservation(reservation_id: str, current_user: User = Depends(get_current_user)):
+    reservation = await db.part_reservations.find_one({"id": reservation_id}, {"_id": 0})
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+    
+    if reservation["status"] != "reserved":
+        raise HTTPException(status_code=400, detail="Reservation is not in reserved status")
+    
+    await db.part_reservations.update_one(
+        {"id": reservation_id},
+        {"$set": {"status": "cancelled", "cancelled_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    await db.parts.update_one(
+        {"id": reservation["part_id"]},
+        {"$inc": {"reserved_quantity": -reservation["quantity"]}}
+    )
+    
+    return {"status": "success", "message": "Reservation cancelled successfully"}
+
+@api_router.post("/part-returns", response_model=PartReturn)
+async def create_part_return(part_return: PartReturnCreate, current_user: User = Depends(get_current_user)):
+    part = await db.parts.find_one({"id": part_return.part_id}, {"_id": 0})
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found")
+    
+    return_obj = PartReturn(**part_return.model_dump(), created_by=current_user.id)
+    doc = return_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.part_returns.insert_one(doc)
+    
+    if part_return.return_type == "return_to_stock" and part_return.condition in ["good", "new"]:
+        await db.parts.update_one(
+            {"id": part_return.part_id},
+            {
+                "$inc": {"quantity": part_return.quantity},
+                "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+            }
+        )
+        
+        if part.get('has_serial') and part_return.serial_numbers:
+            await db.serialized_parts.update_many(
+                {"serial_number": {"$in": part_return.serial_numbers}},
+                {"$set": {"status": "in_stock", "condition": part_return.condition, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+    elif part_return.return_type == "scrap":
+        if part.get('has_serial') and part_return.serial_numbers:
+            await db.serialized_parts.update_many(
+                {"serial_number": {"$in": part_return.serial_numbers}},
+                {"$set": {"status": "scrapped", "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
+    
+    return return_obj
+
+@api_router.get("/part-returns", response_model=List[PartReturn])
+async def get_part_returns(
+    part_id: Optional[str] = None,
+    work_order_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    query = {}
+    if part_id:
+        query["part_id"] = part_id
+    if work_order_id:
+        query["work_order_id"] = work_order_id
+    
+    returns = await db.part_returns.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    for r in returns:
+        if isinstance(r['created_at'], str):
+            r['created_at'] = datetime.fromisoformat(r['created_at'])
+    return returns
+
+@api_router.get("/parts/alerts/low-stock")
+async def get_low_stock_alerts(current_user: User = Depends(get_current_user)):
+    parts = await db.parts.find({"is_active": True}, {"_id": 0}).to_list(1000)
+    
+    alerts = []
+    for part in parts:
+        available = part["quantity"] - part.get("reserved_quantity", 0)
+        if available <= part["min_stock"]:
+            alerts.append({
+                "part_id": part["id"],
+                "part_number": part["part_number"],
+                "name": part["name"],
+                "category": part["category"],
+                "current_quantity": part["quantity"],
+                "reserved_quantity": part.get("reserved_quantity", 0),
+                "available_quantity": available,
+                "min_stock": part["min_stock"],
+                "shortage": part["min_stock"] - available,
+                "severity": "critical" if available <= 0 else "warning" if available <= part["min_stock"] / 2 else "info"
+            })
+    
+    alerts.sort(key=lambda x: x["shortage"], reverse=True)
+    return alerts
 
 @api_router.post("/part-usage", response_model=PartUsage)
 async def add_part_usage(usage: PartUsageCreate, current_user: User = Depends(get_current_user)):
