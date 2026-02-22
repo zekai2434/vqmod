@@ -52,13 +52,13 @@ export default function Dashboard() {
   };
 
   const statCards = stats ? [
-    { icon: Ticket, label: "Toplam Ticket", value: stats.total_tickets, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950" },
-    { icon: Clock, label: "Açık Ticketlar", value: stats.open_tickets, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950" },
-    { icon: AlertTriangle, label: "SLA Riski", value: stats.sla_risk_tickets, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950" },
-    { icon: CheckCircle2, label: "Çözülmüş", value: stats.resolved_tickets, color: "text-green-600", bg: "bg-green-50 dark:bg-green-950" },
-    { icon: Users, label: "Müşteriler", value: stats.total_customers, color: "text-purple-600", bg: "bg-purple-50 dark:bg-purple-950" },
-    { icon: HardDrive, label: "Cihazlar", value: stats.total_assets, color: "text-cyan-600", bg: "bg-cyan-50 dark:bg-cyan-950" },
-    { icon: Wrench, label: "Aktif İş Emirleri", value: stats.active_work_orders, color: "text-indigo-600", bg: "bg-indigo-50 dark:bg-indigo-950" },
+    { icon: Ticket, label: "Toplam Ticket", value: stats.total_tickets, color: FLAT_COLORS.blue, bg: FLAT_COLORS.blue + '20' },
+    { icon: Clock, label: "Açık Ticketlar", value: stats.open_tickets, color: FLAT_COLORS.orange, bg: FLAT_COLORS.orange + '20' },
+    { icon: AlertTriangle, label: "SLA Riski", value: stats.sla_risk_tickets, color: FLAT_COLORS.red, bg: FLAT_COLORS.red + '20' },
+    { icon: CheckCircle2, label: "Çözülmüş", value: stats.resolved_tickets, color: FLAT_COLORS.green, bg: FLAT_COLORS.green + '20' },
+    { icon: Users, label: "Müşteriler", value: stats.total_customers, color: FLAT_COLORS.purple, bg: FLAT_COLORS.purple + '20' },
+    { icon: HardDrive, label: "Cihazlar", value: stats.total_assets, color: FLAT_COLORS.cyan, bg: FLAT_COLORS.cyan + '20' },
+    { icon: Wrench, label: "Aktif İş Emirleri", value: stats.active_work_orders, color: FLAT_COLORS.indigo, bg: FLAT_COLORS.indigo + '20' },
   ] : [];
 
   const getStatusBadge = (status) => {
