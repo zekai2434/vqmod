@@ -17,78 +17,76 @@ Network cihazları (switch, router, firewall, access point vb.) için kapsamlı 
 9. ✅ Rol & Yetkilendirme
 10. ✅ E-posta & SMS Bildirimleri
 11. ✅ Müşteri Self-Service Portalı
-12. ✅ E-posta IMAP Entegrasyonu (Otomatik Ticket Oluşturma)
-13. ✅ **YENİ: WhatsApp Entegrasyonu (Baileys)**
+12. ✅ E-posta IMAP Entegrasyonu
+13. ✅ WhatsApp Entegrasyonu (Baileys)
+14. ✅ Portal Kullanıcı Yönetimi
+15. ✅ **YENİ: Modern UI/UX Tasarım Güncellemesi**
 
-## Son Eklenen Özellikler (Aralık 2025)
+## Son Tasarım Güncellemesi (Aralık 2025)
 
-### WhatsApp Entegrasyonu (Node.js Microservice)
-- [x] Node.js microservice (`/app/whatsapp-service`)
-- [x] Baileys kütüphanesi ile WhatsApp Web bağlantısı
-- [x] QR kod ile kimlik doğrulama
-- [x] Mesaj gönderme ve alma
-- [x] Otomatik yanıt sistemi (destek, durum sorgusu)
-- [x] Mesaj geçmişi takibi
-- [x] Frontend yönetim arayüzü (`/whatsapp`)
+### UI/UX İyileştirmeleri
+- [x] "NetOps Pro" - Performance Pro dark theme
+- [x] Split-screen login sayfası (sol: form, sağ: hero image)
+- [x] Glassmorphism card efektleri
+- [x] Gradient iconlar ve glow efektleri
+- [x] Gruplu sidebar navigasyonu (Ana Menü, Operasyonlar, İletişim, Yönetim)
+- [x] Collapsible sidebar
+- [x] Bento grid dashboard
+- [x] Custom scrollbar ve animasyonlar
+- [x] Status badge renk sistemi (emerald, amber, rose, blue)
+- [x] Font ailesi: Chivo (başlıklar), Inter (body), JetBrains Mono (data)
 
-### Müşteri Self-Service Portalı
-- [x] Ayrı login sistemi (`/portal/login`)
-- [x] Müşteri dashboard'u
-- [x] Ticket oluşturma ve takip
-- [x] Yorum ekleme
-- [x] Cihaz görüntüleme
-- [x] Modern, kullanıcı dostu arayüz
-
-### E-posta IMAP Entegrasyonu
-- [x] IMAP yapılandırma yönetimi
-- [x] Gmail, Outlook, Yahoo, Yandex hazır ayarları
-- [x] Bağlantı testi
-- [x] Gelen e-postalardan otomatik ticket oluşturma
-- [x] E-posta durumu takibi
+### Renk Paleti
+- Background: Zinc-950 (#09090b)
+- Card: Zinc-900/40 with backdrop-blur
+- Primary: Blue-600
+- Success: Emerald-500
+- Warning: Amber-500
+- Error: Rose-500
+- Border: Zinc-800/60
 
 ## Teknik Mimari
 
 ### Backend (FastAPI)
-- JWT kimlik doğrulama (admin ve portal için ayrı)
+- JWT kimlik doğrulama
 - Resend (e-posta), NetGSM (SMS)
-- IMAP entegrasyonu (Python imaplib)
+- IMAP entegrasyonu
 - httpx ile WhatsApp microservice iletişimi
 
 ### WhatsApp Microservice (Node.js)
 - Express.js REST API (Port 3002)
-- @whiskeysockets/baileys kütüphanesi
-- QR kod oluşturma ve tarama
-- Mesaj gönderme/alma
+- @whiskeysockets/baileys
+- QR kod ile bağlantı
 
 ### Frontend (React)
 - Tailwind CSS, Shadcn/UI
-- Müşteri portalı ayrı layout
-- WhatsApp yönetim sayfası
+- Glassmorphism efektler
+- Responsive tasarım
 
-### API Endpoint'leri
-
-**WhatsApp:**
-- `/api/whatsapp/status` - Bağlantı durumu
-- `/api/whatsapp/qr` - QR kod
-- `/api/whatsapp/send` - Mesaj gönderme
-- `/api/whatsapp/incoming` - Gelen mesaj işleme
-- `/api/whatsapp/messages` - Mesaj geçmişi
-- `/api/whatsapp/disconnect` - Bağlantı kesme
-- `/api/whatsapp/reconnect` - Yeniden bağlanma
-
-### Yeni DB Koleksiyonları
-- `whatsapp_messages` - WhatsApp mesaj geçmişi
-
-## Servis Yapısı
+## Dosya Yapısı
 ```
 /app/
-├── backend/           # FastAPI (Port 8001)
-├── frontend/          # React (Port 3000)
-└── whatsapp-service/  # Node.js (Port 3002)
-    ├── index.js
-    ├── package.json
-    └── auth_info/     # WhatsApp oturum bilgileri
+├── backend/
+│   └── server.py
+├── frontend/
+│   └── src/
+│       ├── App.css (Yeni global stiller)
+│       ├── components/
+│       │   ├── DashboardLayout.js (Gruplu sidebar)
+│       │   └── CustomerPortalLayout.js
+│       └── pages/
+│           ├── LoginPage.js (Split-screen)
+│           ├── Dashboard.js (Bento grid)
+│           ├── PortalUserList.js
+│           └── ...
+├── whatsapp-service/
+│   └── index.js
+└── design_guidelines.json
 ```
+
+## Test Bilgileri
+- **Admin:** test@network.com / Test123!
+- **Portal:** Admin panelden portal kullanıcısı oluşturulabilir
 
 ## Devam Eden / Bekleyen Özellikler
 
@@ -96,14 +94,8 @@ Network cihazları (switch, router, firewall, access point vb.) için kapsamlı 
 - [ ] Ticket zaman çizelgesi (timeline view)
 - [ ] Detaylı RMA yönetimi UI
 - [ ] Teknisyen performans raporu
-- [ ] Açık ticket analizi derinleştirme
 
 ## FAZ-2 (Gelecek Geliştirmeler)
 - [ ] ERP entegrasyonu
 - [ ] SNMP/Monitoring entegrasyonu
 - [ ] Offline mobil uygulama
-
-## Test Bilgileri
-- **Admin:** test@network.com / Test123!
-- **Portal:** Müşteri oluşturup portal kullanıcısı eklenmeli
-- **WhatsApp:** QR kod ile telefondan bağlanılmalı
