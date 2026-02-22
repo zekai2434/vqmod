@@ -113,12 +113,13 @@ export default function CustomerList() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="company">Şirket</Label>
+                  <Label htmlFor="company">Şirket/Firma *</Label>
                   <Input
                     id="company"
                     data-testid="customer-company-input"
                     value={formData.company}
                     onChange={(e) => setFormData({...formData, company: e.target.value})}
+                    required
                   />
                 </div>
               </div>
@@ -156,6 +157,26 @@ export default function CustomerList() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
+                  <Label htmlFor="tax_number">Vergi Numarası</Label>
+                  <Input
+                    id="tax_number"
+                    data-testid="customer-tax-number-input"
+                    value={formData.tax_number}
+                    onChange={(e) => setFormData({...formData, tax_number: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tax_office">Vergi Dairesi</Label>
+                  <Input
+                    id="tax_office"
+                    data-testid="customer-tax-office-input"
+                    value={formData.tax_office}
+                    onChange={(e) => setFormData({...formData, tax_office: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="contract_type">Sözleşme Tipi</Label>
                   <Select value={formData.contract_type} onValueChange={(v) => setFormData({...formData, contract_type: v})}>
                     <SelectTrigger data-testid="contract-type-select">
@@ -181,6 +202,16 @@ export default function CustomerList() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notlar</Label>
+                <Input
+                  id="notes"
+                  data-testid="customer-notes-input"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                  placeholder="Müşteri hakkında notlar..."
+                />
               </div>
               <div className="flex gap-2 pt-4">
                 <Button data-testid="submit-customer-btn" type="submit">Ekle</Button>
