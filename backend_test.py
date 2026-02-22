@@ -2,6 +2,7 @@ import requests
 import sys
 from datetime import datetime
 import json
+import base64
 
 class NetworkServiceAPITester:
     def __init__(self, base_url="https://netrepair-pro.preview.emergentagent.com/api"):
