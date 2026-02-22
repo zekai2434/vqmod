@@ -2043,6 +2043,168 @@ async def get_users(current_user: User = Depends(get_current_user)):
             u['created_at'] = datetime.fromisoformat(u['created_at'])
     return users
 
+# Notification Endpoints
+@api_router.get("/notifications/settings")
+async def get_notification_settings_endpoint(current_user: User = Depends(get_current_user)):
+    settings = await get_notification_settings()
+    return settings.model_dump()
+
+@api_router.patch("/notifications/settings")
+async def update_notification_settings(update: NotificationSettingsUpdate, current_user: User = Depends(get_current_user)):
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    existing = await db.notification_settings.find_one({}, {"_id": 0})
+    if existing:
+        await db.notification_settings.update_one({}, {"$set": update_data})
+    else:
+        default_settings = NotificationSettings()
+        doc = default_settings.model_dump()
+        doc.update(update_data)
+        doc['updated_at'] = doc['updated_at'] if isinstance(doc['updated_at'], str) else doc['updated_at'].isoformat()
+        await db.notification_settings.insert_one(doc)
+    
+    return await get_notification_settings_endpoint(current_user)
+
+@api_router.get("/notifications", response_model=List[Notification])
+async def get_notifications(
+    recipient_id: Optional[str] = None,
+    notification_type: Optional[str] = None,
+    channel: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user)
+):
+    query = {}
+    if recipient_id:
+        query["recipient_id"] = recipient_id
+    if notification_type:
+        query["notification_type"] = notification_type
+    if channel:
+        query["channel"] = channel
+    if status:
+        query["status"] = status
+    
+    notifications = await db.notifications.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    for n in notifications:
+        if isinstance(n['created_at'], str):
+            n['created_at'] = datetime.fromisoformat(n['created_at'])
+        if n.get('sent_at') and isinstance(n['sent_at'], str):
+            n['sent_at'] = datetime.fromisoformat(n['sent_at'])
+    return notifications
+
+@api_router.post("/notifications/send")
+async def send_manual_notification(notification: NotificationCreate, current_user: User = Depends(get_current_user)):
+    results = []
+    
+    if notification.channel == "email" and notification.recipient_email:
+        result = await send_email_notification(
+            notification.recipient_email,
+            notification.subject or "Bildirim",
+            notification.content
+        )
+        
+        notification_obj = Notification(**notification.model_dump())
+        notification_obj.status = "sent" if result["status"] == "sent" else "failed"
+        notification_obj.sent_at = datetime.now(timezone.utc) if result["status"] == "sent" else None
+        notification_obj.error_message = result.get("error")
+        
+        doc = notification_obj.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        if doc['sent_at']:
+            doc['sent_at'] = doc['sent_at'].isoformat()
+        await db.notifications.insert_one(doc)
+        
+        results.append({"channel": "email", **result})
+    
+    if notification.channel == "sms" and notification.recipient_phone:
+        result = await send_sms_notification(notification.recipient_phone, notification.content)
+        
+        notification_obj = Notification(**notification.model_dump())
+        notification_obj.status = "sent" if result["status"] == "sent" else "failed"
+        notification_obj.sent_at = datetime.now(timezone.utc) if result["status"] == "sent" else None
+        notification_obj.error_message = result.get("error")
+        
+        doc = notification_obj.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        if doc['sent_at']:
+            doc['sent_at'] = doc['sent_at'].isoformat()
+        await db.notifications.insert_one(doc)
+        
+        results.append({"channel": "sms", **result})
+    
+    return {"results": results}
+
+@api_router.post("/notifications/test-email")
+async def test_email_notification(current_user: User = Depends(get_current_user)):
+    result = await send_email_notification(
+        current_user.email,
+        "NetworkOps Test E-postası",
+        """
+        <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2 style="color: #2563eb;">Test E-postası</h2>
+            <p>Bu bir test e-postasıdır. E-posta bildirimleri başarıyla çalışıyor!</p>
+            <p style="color: #6b7280;">NetworkOps - Teknik Servis Yönetimi</p>
+        </body>
+        </html>
+        """
+    )
+    return result
+
+@api_router.post("/notifications/test-sms")
+async def test_sms_notification(phone: str, current_user: User = Depends(get_current_user)):
+    result = await send_sms_notification(phone, "NetworkOps test SMS mesaji. Bildirimler basariyla calisiyor!")
+    return result
+
+@api_router.get("/notifications/templates")
+async def get_notification_templates(current_user: User = Depends(get_current_user)):
+    return {
+        "email_templates": list(EMAIL_TEMPLATES.keys()),
+        "sms_templates": list(SMS_TEMPLATES.keys())
+    }
+
+@api_router.post("/notifications/sla-check")
+async def check_sla_and_notify(current_user: User = Depends(get_current_user)):
+    settings = await get_notification_settings()
+    if not settings.notify_on_sla_risk:
+        return {"message": "SLA notifications disabled", "notified": 0}
+    
+    now = datetime.now(timezone.utc)
+    warning_time = now + timedelta(hours=2)
+    
+    at_risk_tickets = await db.tickets.find({
+        "status": {"$nin": ["resolved", "closed"]},
+        "sla_deadline": {"$lt": warning_time.isoformat(), "$gt": now.isoformat()}
+    }, {"_id": 0}).to_list(100)
+    
+    notified = 0
+    for ticket in at_risk_tickets:
+        if ticket.get('assigned_to'):
+            assignee = await db.users.find_one({"id": ticket['assigned_to']}, {"_id": 0})
+            if assignee:
+                customer = await db.customers.find_one({"id": ticket['customer_id']}, {"_id": 0})
+                
+                template_data = {
+                    "ticket_number": ticket['ticket_number'],
+                    "title": ticket['title'],
+                    "sla_deadline": ticket.get('sla_deadline', 'N/A'),
+                    "assignee_name": assignee.get('full_name', 'Bilinmeyen'),
+                    "customer_name": customer.get('name', 'Bilinmeyen') if customer else 'Bilinmeyen'
+                }
+                
+                await send_notification(
+                    "sla_risk",
+                    template_data,
+                    recipient_email=assignee.get('email'),
+                    recipient_id=assignee.get('id'),
+                    reference_type="ticket",
+                    reference_id=ticket['id']
+                )
+                notified += 1
+    
+    return {"message": f"SLA check completed", "notified": notified}
+
 app.include_router(api_router)
 
 app.add_middleware(
