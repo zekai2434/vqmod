@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Ticket, Users, Package, HardDrive, Wrench, FileText, Settings, LogOut, Menu, X, Bell, Clock, Shield, Mail, MessageCircle, UserCircle } from "lucide-react";
+import { LayoutDashboard, Ticket, Users, Package, HardDrive, Wrench, FileText, Settings, LogOut, Menu, X, Bell, Clock, Shield, Mail, MessageCircle, UserCircle, ChevronRight, Activity } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -8,23 +8,44 @@ export default function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
-  const menuItems = [
-    { path: "/", icon: LayoutDashboard, label: "Dashboard" },
-    { path: "/tickets", icon: Ticket, label: "Ticketlar" },
-    { path: "/customers", icon: Users, label: "Müşteriler" },
-    { path: "/assets", icon: HardDrive, label: "Cihazlar" },
-    { path: "/work-orders", icon: Wrench, label: "İş Emirleri" },
-    { path: "/parts", icon: Package, label: "Parçalar" },
-    { path: "/rma", icon: FileText, label: "RMA" },
-    { path: "/reports", icon: FileText, label: "Raporlar" },
-    { path: "/notifications", icon: Bell, label: "Bildirimler" },
-    { path: "/email-settings", icon: Mail, label: "E-posta Ayarları" },
-    { path: "/whatsapp", icon: MessageCircle, label: "WhatsApp" },
-    { path: "/portal-users", icon: UserCircle, label: "Portal Kullanıcıları" },
-    { path: "/sla-settings", icon: Clock, label: "SLA Yönetimi" },
-    { path: "/roles", icon: Shield, label: "Rol Yönetimi" },
-    { path: "/users", icon: Settings, label: "Kullanıcılar" },
+  const menuGroups = [
+    {
+      label: "Ana Menü",
+      items: [
+        { path: "/", icon: LayoutDashboard, label: "Dashboard" },
+        { path: "/tickets", icon: Ticket, label: "Ticketlar" },
+        { path: "/customers", icon: Users, label: "Müşteriler" },
+        { path: "/assets", icon: HardDrive, label: "Cihazlar" },
+      ]
+    },
+    {
+      label: "Operasyonlar",
+      items: [
+        { path: "/work-orders", icon: Wrench, label: "İş Emirleri" },
+        { path: "/parts", icon: Package, label: "Parçalar" },
+        { path: "/rma", icon: FileText, label: "RMA" },
+        { path: "/reports", icon: Activity, label: "Raporlar" },
+      ]
+    },
+    {
+      label: "İletişim",
+      items: [
+        { path: "/notifications", icon: Bell, label: "Bildirimler" },
+        { path: "/email-settings", icon: Mail, label: "E-posta" },
+        { path: "/whatsapp", icon: MessageCircle, label: "WhatsApp" },
+      ]
+    },
+    {
+      label: "Yönetim",
+      items: [
+        { path: "/portal-users", icon: UserCircle, label: "Portal Kullanıcıları" },
+        { path: "/sla-settings", icon: Clock, label: "SLA Yönetimi" },
+        { path: "/roles", icon: Shield, label: "Roller" },
+        { path: "/users", icon: Settings, label: "Kullanıcılar" },
+      ]
+    }
   ];
 
   const handleLogout = () => {
@@ -34,89 +55,146 @@ export default function DashboardLayout() {
     navigate('/login');
   };
 
+  const isActive = (path) => {
+    return location.pathname === path || 
+      (path !== "/" && location.pathname.startsWith(path));
+  };
+
   return (
-    <div className="flex h-screen bg-background">
-      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform duration-200 lg:translate-x-0 ${
+    <div className="flex h-screen bg-zinc-950">
+      {/* Sidebar */}
+      <aside className={`fixed lg:static inset-y-0 left-0 z-50 bg-zinc-950/95 border-r border-zinc-800/60 transform transition-all duration-300 lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+      } ${collapsed ? 'w-20' : 'w-64'}`}>
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between h-16 px-6 border-b border-border">
-            <h1 className="text-xl font-bold tracking-tight" style={{fontFamily: 'Chivo, sans-serif'}}>
-              NetworkOps
-            </h1>
+          {/* Logo */}
+          <div className="flex items-center justify-between h-16 px-4 border-b border-zinc-800/60">
+            <Link to="/" className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <Activity className="w-5 h-5 text-white" strokeWidth={2.5} />
+              </div>
+              {!collapsed && (
+                <div>
+                  <h1 className="text-lg font-bold text-white tracking-tight" style={{fontFamily: 'Chivo, sans-serif'}}>
+                    NetOps
+                  </h1>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Pro</p>
+                </div>
+              )}
+            </Link>
             <button
               data-testid="close-sidebar-btn"
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden"
+              className="lg:hidden p-1 rounded hover:bg-zinc-800"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 text-zinc-400" />
             </button>
           </div>
           
-          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
-            {menuItems.map((item) => {
-              const isActive = location.pathname === item.path || 
-                (item.path !== "/" && location.pathname.startsWith(item.path));
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  data-testid={`nav-${item.label.toLowerCase()}`}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors ${
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                  }`}
-                >
-                  <item.icon className="w-5 h-5" />
-                  {item.label}
-                </Link>
-              );
-            })}
+          {/* Navigation */}
+          <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto custom-scrollbar">
+            {menuGroups.map((group, idx) => (
+              <div key={idx}>
+                {!collapsed && (
+                  <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
+                    {group.label}
+                  </p>
+                )}
+                <div className="space-y-1">
+                  {group.items.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all duration-200 ${
+                        isActive(item.path)
+                          ? 'bg-gradient-to-r from-blue-600/20 to-transparent text-blue-400 border-l-2 border-blue-500'
+                          : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'
+                      }`}
+                    >
+                      <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive(item.path) ? 'text-blue-400' : 'text-zinc-500 group-hover:text-zinc-300'}`} strokeWidth={1.5} />
+                      {!collapsed && <span className="truncate">{item.label}</span>}
+                      {!collapsed && isActive(item.path) && (
+                        <ChevronRight className="w-4 h-4 ml-auto text-blue-400" />
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
           </nav>
 
-          <div className="p-4 border-t border-border">
+          {/* User & Logout */}
+          <div className="p-3 border-t border-zinc-800/60">
+            <div className={`mb-3 p-3 rounded-lg bg-zinc-900/50 ${collapsed ? 'hidden' : ''}`}>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-sm font-bold">
+                  {(JSON.parse(localStorage.getItem('user') || '{}').full_name || 'U').charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-zinc-200 truncate">
+                    {JSON.parse(localStorage.getItem('user') || '{}').full_name || 'Kullanıcı'}
+                  </p>
+                  <p className="text-xs text-zinc-500 truncate">
+                    {JSON.parse(localStorage.getItem('user') || '{}').email || ''}
+                  </p>
+                </div>
+              </div>
+            </div>
             <Button
               data-testid="logout-btn"
               variant="ghost"
-              className="w-full justify-start text-muted-foreground hover:text-destructive"
+              className={`w-full text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 ${collapsed ? 'justify-center px-0' : 'justify-start'}`}
               onClick={handleLogout}
             >
-              <LogOut className="w-5 h-5 mr-3" />
-              Çıkış Yap
+              <LogOut className="w-5 h-5" strokeWidth={1.5} />
+              {!collapsed && <span className="ml-3">Çıkış Yap</span>}
             </Button>
           </div>
         </div>
       </aside>
 
+      {/* Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
+      {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-30">
+        {/* Header */}
+        <header className="h-16 border-b border-zinc-800/60 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-30">
           <div className="flex items-center justify-between h-full px-6">
-            <button
-              data-testid="open-sidebar-btn"
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
-                Hoş geldiniz, {JSON.parse(localStorage.getItem('user') || '{}').full_name || 'Kullanıcı'}
-              </span>
+              <button
+                data-testid="open-sidebar-btn"
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 rounded-lg hover:bg-zinc-800 text-zinc-400"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setCollapsed(!collapsed)}
+                className="hidden lg:flex p-2 rounded-lg hover:bg-zinc-800 text-zinc-400"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span className="text-xs font-medium text-emerald-400">Sistem Aktif</span>
+              </div>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto custom-scrollbar">
-          <div className="p-6 md:p-8 lg:p-10">
+        {/* Page Content */}
+        <main className="flex-1 overflow-y-auto custom-scrollbar bg-zinc-950">
+          <div className="p-6 md:p-8">
             <Outlet />
           </div>
         </main>
