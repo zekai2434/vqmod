@@ -424,6 +424,130 @@ export default function WorkOrderDetail() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="parts" className="space-y-4 mt-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">Kullanılan Parçalar</CardTitle>
+                    {workOrder.status !== 'completed' && (
+                      <Dialog open={partDialogOpen} onOpenChange={setPartDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" data-testid="add-part-btn">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Parça Ekle
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Parça Ekle / Rezerve Et</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label>Parça Seçin</Label>
+                              <Select value={selectedPart} onValueChange={setSelectedPart}>
+                                <SelectTrigger data-testid="part-select">
+                                  <SelectValue placeholder="Parça seçin" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {parts.filter(p => p.quantity > 0).map(p => (
+                                    <SelectItem key={p.id} value={p.id}>
+                                      <div className="flex items-center justify-between gap-4">
+                                        <span>{p.part_number} - {p.name}</span>
+                                        <Badge variant="outline">Stok: {p.quantity - (p.reserved_quantity || 0)}</Badge>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Miktar</Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                value={partQuantity}
+                                onChange={(e) => setPartQuantity(parseInt(e.target.value) || 1)}
+                                data-testid="part-quantity-input"
+                              />
+                            </div>
+                            <div className="flex gap-2 pt-2">
+                              <Button onClick={handleAddPartUsage} disabled={addingPart} data-testid="use-part-btn">
+                                {addingPart ? "..." : "Kullan"}
+                              </Button>
+                              <Button variant="outline" onClick={handleReservePart} disabled={addingPart} data-testid="reserve-part-btn">
+                                {addingPart ? "..." : "Rezerve Et"}
+                              </Button>
+                              <Button variant="ghost" onClick={() => setPartDialogOpen(false)}>İptal</Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {/* Reservations */}
+                  {partReservations.filter(r => r.status === 'reserved').length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium mb-2 text-orange-600">Rezerve Edilen Parçalar</h4>
+                      <div className="space-y-2">
+                        {partReservations.filter(r => r.status === 'reserved').map(reservation => {
+                          const partInfo = getPartInfo(reservation.part_id);
+                          return (
+                            <div key={reservation.id} className="flex items-center justify-between p-3 rounded-lg bg-orange-50 border border-orange-200">
+                              <div>
+                                <p className="font-medium text-sm">{partInfo.name}</p>
+                                <p className="text-xs text-muted-foreground">{partInfo.number} • Miktar: {reservation.quantity}</p>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button size="sm" variant="default" onClick={() => handleUseReservation(reservation.id)}>
+                                  Kullan
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => handleCancelReservation(reservation.id)}>
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Used Parts */}
+                  {partUsage.length === 0 && partReservations.filter(r => r.status === 'reserved').length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      Bu iş emrinde henüz parça kullanılmamış
+                    </p>
+                  ) : partUsage.length > 0 && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium mb-2 text-green-600">Kullanılan Parçalar</h4>
+                      {partUsage.map(usage => {
+                        const partInfo = getPartInfo(usage.part_id);
+                        return (
+                          <div key={usage.id} className="flex items-center justify-between p-3 rounded-lg bg-green-50 border border-green-200">
+                            <div>
+                              <p className="font-medium text-sm">{partInfo.name}</p>
+                              <p className="text-xs text-muted-foreground">{partInfo.number} • Miktar: {usage.quantity}</p>
+                              {usage.serial_numbers?.length > 0 && (
+                                <p className="text-xs text-muted-foreground">S/N: {usage.serial_numbers.join(", ")}</p>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <Badge variant="success">Kullanıldı</Badge>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {new Date(usage.created_at).toLocaleDateString('tr-TR')}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="report" className="space-y-4 mt-4">
               <Card>
                 <CardContent className="p-6 space-y-4">
