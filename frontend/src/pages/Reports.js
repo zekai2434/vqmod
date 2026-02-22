@@ -180,31 +180,33 @@ export default function Reports() {
 
         <TabsContent value="overview" className="space-y-6 mt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
+            <Card className="border-l-4" style={{borderLeftColor: FLAT_COLORS.blue}}>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{backgroundColor: FLAT_COLORS.blue + '20'}}>
+                    <TrendingUp className="w-5 h-5" style={{color: FLAT_COLORS.blue}} />
+                  </div>
                   SLA Uyum Oranı
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {slaData && (
                   <div>
-                    <div className="text-4xl font-bold mb-2" style={{fontFamily: 'Chivo, sans-serif'}}>
+                    <div className="text-5xl font-bold mb-4" style={{fontFamily: 'Chivo, sans-serif', color: FLAT_COLORS.blue}}>
                       {slaData.compliance_rate}%
                     </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">SLA İçinde:</span>
-                        <Badge variant="success">{slaData.sla_met}</Badge>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between items-center p-2 rounded" style={{backgroundColor: FLAT_COLORS.green + '15'}}>
+                        <span className="font-medium">SLA İçinde:</span>
+                        <span className="font-bold text-lg" style={{color: FLAT_COLORS.green}}>{slaData.sla_met}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">SLA İhlal:</span>
-                        <Badge variant="error">{slaData.sla_breached}</Badge>
+                      <div className="flex justify-between items-center p-2 rounded" style={{backgroundColor: FLAT_COLORS.red + '15'}}>
+                        <span className="font-medium">SLA İhlal:</span>
+                        <span className="font-bold text-lg" style={{color: FLAT_COLORS.red}}>{slaData.sla_breached}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Toplam:</span>
-                        <span className="font-medium">{slaData.total_resolved}</span>
+                      <div className="flex justify-between items-center p-2 rounded bg-muted">
+                        <span className="font-medium">Toplam:</span>
+                        <span className="font-bold text-lg">{slaData.total_resolved}</span>
                       </div>
                     </div>
                   </div>
@@ -212,34 +214,39 @@ export default function Reports() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4" style={{borderLeftColor: FLAT_COLORS.purple}}>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-blue-600" />
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{backgroundColor: FLAT_COLORS.purple + '20'}}>
+                    <Clock className="w-5 h-5" style={{color: FLAT_COLORS.purple}} />
+                  </div>
                   Ortalama MTTR
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {mttrData && (
                   <div>
-                    <div className="text-4xl font-bold mb-2" style={{fontFamily: 'Chivo, sans-serif'}}>
+                    <div className="text-5xl font-bold mb-4" style={{fontFamily: 'Chivo, sans-serif', color: FLAT_COLORS.purple}}>
                       {mttrData.average_mttr_hours}h
                     </div>
                     <p className="text-sm text-muted-foreground mb-4">
                       {mttrData.total_tickets} ticket analiz edildi
                     </p>
-                    <div className="text-xs space-y-1">
-                      <div className="flex justify-between">
-                        <span>Kritik:</span>
-                        <span className="font-medium">{mttrData.mttr_by_priority.critical}h</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{backgroundColor: FLAT_COLORS.red}}></div>
+                        <span className="text-xs flex-1">Kritik</span>
+                        <span className="text-sm font-bold">{mttrData.mttr_by_priority.critical}h</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Yüksek:</span>
-                        <span className="font-medium">{mttrData.mttr_by_priority.high}h</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{backgroundColor: FLAT_COLORS.orange}}></div>
+                        <span className="text-xs flex-1">Yüksek</span>
+                        <span className="text-sm font-bold">{mttrData.mttr_by_priority.high}h</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Orta:</span>
-                        <span className="font-medium">{mttrData.mttr_by_priority.medium}h</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full" style={{backgroundColor: FLAT_COLORS.blue}}></div>
+                        <span className="text-xs flex-1">Orta</span>
+                        <span className="text-sm font-bold">{mttrData.mttr_by_priority.medium}h</span>
                       </div>
                     </div>
                   </div>
@@ -247,35 +254,37 @@ export default function Reports() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-l-4" style={{borderLeftColor: FLAT_COLORS.orange}}>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-orange-600" />
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{backgroundColor: FLAT_COLORS.orange + '20'}}>
+                    <AlertTriangle className="w-5 h-5" style={{color: FLAT_COLORS.orange}} />
+                  </div>
                   Açık Ticket Yaşı
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {agingData && (
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between items-center">
-                      <span>0-24 saat:</span>
-                      <Badge variant="success">{agingData['0-24h']}</Badge>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center p-2 rounded" style={{backgroundColor: FLAT_COLORS.green + '15'}}>
+                      <span className="text-sm">0-24 saat</span>
+                      <span className="font-bold text-lg" style={{color: FLAT_COLORS.green}}>{agingData['0-24h']}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span>1-3 gün:</span>
-                      <Badge variant="info">{agingData['1-3d']}</Badge>
+                    <div className="flex justify-between items-center p-2 rounded" style={{backgroundColor: FLAT_COLORS.blue + '15'}}>
+                      <span className="text-sm">1-3 gün</span>
+                      <span className="font-bold text-lg" style={{color: FLAT_COLORS.blue}}>{agingData['1-3d']}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span>3-7 gün:</span>
-                      <Badge variant="warning">{agingData['3-7d']}</Badge>
+                    <div className="flex justify-between items-center p-2 rounded" style={{backgroundColor: FLAT_COLORS.orange + '15'}}>
+                      <span className="text-sm">3-7 gün</span>
+                      <span className="font-bold text-lg" style={{color: FLAT_COLORS.orange}}>{agingData['3-7d']}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span>7-14 gün:</span>
-                      <Badge variant="error">{agingData['7-14d']}</Badge>
+                    <div className="flex justify-between items-center p-2 rounded" style={{backgroundColor: FLAT_COLORS.amber + '15'}}>
+                      <span className="text-sm">7-14 gün</span>
+                      <span className="font-bold text-lg" style={{color: FLAT_COLORS.amber}}>{agingData['7-14d']}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span>14+ gün:</span>
-                      <Badge variant="error">{agingData['14d+']}</Badge>
+                    <div className="flex justify-between items-center p-2 rounded" style={{backgroundColor: FLAT_COLORS.red + '15'}}>
+                      <span className="text-sm">14+ gün</span>
+                      <span className="font-bold text-lg" style={{color: FLAT_COLORS.red}}>{agingData['14d+']}</span>
                     </div>
                   </div>
                 )}
