@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LoginPage from "@/pages/LoginPage";
@@ -13,6 +12,7 @@ import AssetList from "@/pages/AssetList";
 import PartList from "@/pages/PartList";
 import RMAList from "@/pages/RMAList";
 import WorkOrderList from "@/pages/WorkOrderList";
+import WorkOrderDetail from "@/pages/WorkOrderDetail";
 import UserList from "@/pages/UserList";
 import Reports from "@/pages/Reports";
 import { Toaster } from "sonner";
@@ -43,6 +43,7 @@ function App() {
             <Route path="parts" element={<PartList />} />
             <Route path="rma" element={<RMAList />} />
             <Route path="work-orders" element={<WorkOrderList />} />
+            <Route path="work-orders/:id" element={<WorkOrderDetail />} />
             <Route path="users" element={<UserList />} />
             <Route path="reports" element={<Reports />} />
           </Route>
