@@ -1200,8 +1200,9 @@ async def add_part_usage(usage: PartUsageCreate, current_user: User = Depends(ge
     if not part:
         raise HTTPException(status_code=404, detail="Part not found")
     
-    if part["quantity"] < usage.quantity:
-        raise HTTPException(status_code=400, detail="Insufficient stock")
+    available = part["quantity"] - part.get("reserved_quantity", 0)
+    if available < usage.quantity:
+        raise HTTPException(status_code=400, detail=f"Insufficient stock. Available: {available}")
     
     work_order = await db.work_orders.find_one({"id": usage.work_order_id}, {"_id": 0})
     if not work_order:
@@ -1218,15 +1219,56 @@ async def add_part_usage(usage: PartUsageCreate, current_user: User = Depends(ge
     
     await db.parts.update_one(
         {"id": usage.part_id},
-        {"$inc": {"quantity": -usage.quantity}}
+        {
+            "$inc": {"quantity": -usage.quantity},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+        }
     )
+    
+    if part.get('has_serial') and usage.serial_numbers:
+        await db.serialized_parts.update_many(
+            {"serial_number": {"$in": usage.serial_numbers}},
+            {
+                "$set": {
+                    "status": "used",
+                    "assigned_to_work_order": usage.work_order_id,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+    
+    movement_obj = StockMovement(
+        part_id=usage.part_id,
+        movement_type="usage",
+        quantity=usage.quantity,
+        serial_numbers=usage.serial_numbers,
+        reference_type="work_order",
+        reference_id=usage.work_order_id,
+        reason=f"Used in work order",
+        created_by=current_user.id
+    )
+    movement_doc = movement_obj.model_dump()
+    movement_doc['created_at'] = movement_doc['created_at'].isoformat()
+    await db.stock_movements.insert_one(movement_doc)
     
     return usage_obj
 
 @api_router.get("/part-usage", response_model=List[PartUsage])
-async def get_part_usage(work_order_id: Optional[str] = None, current_user: User = Depends(get_current_user)):
-    query = {} if not work_order_id else {"work_order_id": work_order_id}
-    usage_list = await db.part_usage.find(query, {"_id": 0}).to_list(1000)
+async def get_part_usage(
+    work_order_id: Optional[str] = None,
+    part_id: Optional[str] = None,
+    ticket_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    query = {}
+    if work_order_id:
+        query["work_order_id"] = work_order_id
+    if part_id:
+        query["part_id"] = part_id
+    if ticket_id:
+        query["ticket_id"] = ticket_id
+    
+    usage_list = await db.part_usage.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
     for u in usage_list:
         if isinstance(u['created_at'], str):
             u['created_at'] = datetime.fromisoformat(u['created_at'])
