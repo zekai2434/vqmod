@@ -16,7 +16,22 @@ import { toast } from "sonner";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const COLORS = ['#0052CC', '#64748B', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899'];
+const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#6366F1'];
+
+const FLAT_COLORS = {
+  blue: '#3B82F6',
+  green: '#10B981',
+  orange: '#F59E0B',
+  red: '#EF4444',
+  purple: '#8B5CF6',
+  cyan: '#06B6D4',
+  pink: '#EC4899',
+  indigo: '#6366F1',
+  emerald: '#059669',
+  amber: '#F97316',
+  slate: '#64748B',
+  teal: '#14B8A6'
+};
 
 export default function Reports() {
   const [loading, setLoading] = useState(true);
