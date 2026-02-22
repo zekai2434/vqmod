@@ -7,7 +7,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, User, MapPin, Phone, Mail, Building2 } from "lucide-react";
+import { ArrowLeft, Plus, User, MapPin, Phone, Mail, Building2, FileText, Upload, Paperclip } from "lucide-react";
+import FileUpload from "@/components/FileUpload";
 import axios from "axios";
 import { toast } from "sonner";
 
