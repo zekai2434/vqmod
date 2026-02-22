@@ -299,13 +299,34 @@ export default function Reports() {
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="date" stroke="#6b7280" style={{fontSize: '12px'}} />
+                  <YAxis stroke="#6b7280" style={{fontSize: '12px'}} />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                    }}
+                  />
                   <Legend />
-                  <Line type="monotone" dataKey="created" stroke="#0052CC" name="Oluşturulan" />
-                  <Line type="monotone" dataKey="resolved" stroke="#10B981" name="Çözülen" />
+                  <Line 
+                    type="monotone" 
+                    dataKey="created" 
+                    stroke={FLAT_COLORS.blue}
+                    strokeWidth={3}
+                    dot={{fill: FLAT_COLORS.blue, r: 4}}
+                    name="Oluşturulan" 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="resolved" 
+                    stroke={FLAT_COLORS.green}
+                    strokeWidth={3}
+                    dot={{fill: FLAT_COLORS.green, r: 4}}
+                    name="Çözülen" 
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
