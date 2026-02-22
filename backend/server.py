@@ -632,6 +632,11 @@ async def create_work_order(work_order: WorkOrderCreate, current_user: User = De
     doc['created_at'] = doc['created_at'].isoformat()
     if doc['completed_at']:
         doc['completed_at'] = doc['completed_at'].isoformat()
+    # Serialize checklist items
+    if doc.get('checklist'):
+        for item in doc['checklist']:
+            if item.get('completed_at') and hasattr(item['completed_at'], 'isoformat'):
+                item['completed_at'] = item['completed_at'].isoformat()
     await db.work_orders.insert_one(doc)
     return work_order_obj
 
@@ -663,6 +668,12 @@ async def update_work_order(work_order_id: str, update: WorkOrderUpdate, current
     
     if update.status == "completed":
         update_data['completed_at'] = datetime.now(timezone.utc).isoformat()
+    
+    # Serialize checklist items if present
+    if update_data.get('checklist'):
+        for item in update_data['checklist']:
+            if item.get('completed_at') and hasattr(item['completed_at'], 'isoformat'):
+                item['completed_at'] = item['completed_at'].isoformat()
     
     await db.work_orders.update_one({"id": work_order_id}, {"$set": update_data})
     
