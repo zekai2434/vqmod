@@ -1025,6 +1025,28 @@ async def create_ticket(ticket: TicketCreate, current_user: User = Depends(get_c
         doc['resolved_at'] = doc['resolved_at'].isoformat()
     
     await db.tickets.insert_one(doc)
+    
+    # Send notification to customer
+    settings = await get_notification_settings()
+    if settings.notify_on_ticket_created:
+        customer = await db.customers.find_one({"id": ticket.customer_id}, {"_id": 0})
+        if customer:
+            priority_labels = {"low": "Düşük", "medium": "Orta", "high": "Yüksek", "critical": "Kritik"}
+            template_data = {
+                "ticket_number": ticket_number,
+                "title": ticket.title,
+                "priority": priority_labels.get(ticket.priority, ticket.priority),
+                "customer_name": customer.get('name', 'Değerli Müşteri')
+            }
+            asyncio.create_task(send_notification(
+                "ticket_created",
+                template_data,
+                recipient_email=customer.get('email'),
+                recipient_phone=customer.get('phone'),
+                reference_type="ticket",
+                reference_id=ticket_obj.id
+            ))
+    
     return ticket_obj
 
 @api_router.get("/tickets", response_model=List[Ticket])
