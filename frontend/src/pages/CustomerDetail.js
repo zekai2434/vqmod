@@ -23,9 +23,13 @@ export default function CustomerDetail() {
   const [locations, setLocations] = useState([]);
   const [assets, setAssets] = useState([]);
   const [tickets, setTickets] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
+  const [documentDialogOpen, setDocumentDialogOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
   
   const [contactForm, setContactForm] = useState({
     name: "",
