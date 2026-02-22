@@ -84,6 +84,7 @@ function App() {
             <Route path="sla-settings" element={<SLASettings />} />
             <Route path="roles" element={<RoleSettings />} />
             <Route path="email-settings" element={<EmailSettings />} />
+            <Route path="whatsapp" element={<WhatsAppSettings />} />
           </Route>
         </Routes>
       </BrowserRouter>
