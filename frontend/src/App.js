@@ -44,6 +44,7 @@ function App() {
             <Route path="rma" element={<RMAList />} />
             <Route path="work-orders" element={<WorkOrderList />} />
             <Route path="users" element={<UserList />} />
+            <Route path="reports" element={<Reports />} />
           </Route>
         </Routes>
       </BrowserRouter>
