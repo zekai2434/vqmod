@@ -502,7 +502,354 @@ class RMAUpdate(BaseModel):
     replacement_serial: Optional[str] = None
     swap_device_id: Optional[str] = None
 
-def verify_password(plain_password, hashed_password):
+# Notification Models
+class NotificationTemplate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    event_type: str
+    subject_template: str
+    body_template: str
+    sms_template: Optional[str] = None
+    is_active: bool = True
+    channels: List[str] = ["email"]
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class NotificationTemplateCreate(BaseModel):
+    name: str
+    event_type: str
+    subject_template: str
+    body_template: str
+    sms_template: Optional[str] = None
+    channels: List[str] = ["email"]
+
+class Notification(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    recipient_id: Optional[str] = None
+    recipient_email: Optional[EmailStr] = None
+    recipient_phone: Optional[str] = None
+    notification_type: str
+    channel: str
+    subject: Optional[str] = None
+    content: str
+    reference_type: Optional[str] = None
+    reference_id: Optional[str] = None
+    status: str = "pending"
+    sent_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class NotificationCreate(BaseModel):
+    recipient_id: Optional[str] = None
+    recipient_email: Optional[EmailStr] = None
+    recipient_phone: Optional[str] = None
+    notification_type: str
+    channel: str = "email"
+    subject: Optional[str] = None
+    content: str
+    reference_type: Optional[str] = None
+    reference_id: Optional[str] = None
+
+class NotificationSettings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email_enabled: bool = True
+    sms_enabled: bool = False
+    whatsapp_enabled: bool = False
+    sender_email: str = "noreply@example.com"
+    sender_name: str = "NetworkOps"
+    netgsm_username: Optional[str] = None
+    netgsm_password: Optional[str] = None
+    netgsm_header: Optional[str] = None
+    notify_on_ticket_created: bool = True
+    notify_on_ticket_assigned: bool = True
+    notify_on_ticket_updated: bool = True
+    notify_on_ticket_resolved: bool = True
+    notify_on_sla_risk: bool = True
+    notify_on_comment_mention: bool = True
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class NotificationSettingsUpdate(BaseModel):
+    email_enabled: Optional[bool] = None
+    sms_enabled: Optional[bool] = None
+    whatsapp_enabled: Optional[bool] = None
+    sender_email: Optional[str] = None
+    sender_name: Optional[str] = None
+    netgsm_username: Optional[str] = None
+    netgsm_password: Optional[str] = None
+    netgsm_header: Optional[str] = None
+    notify_on_ticket_created: Optional[bool] = None
+    notify_on_ticket_assigned: Optional[bool] = None
+    notify_on_ticket_updated: Optional[bool] = None
+    notify_on_ticket_resolved: Optional[bool] = None
+    notify_on_sla_risk: Optional[bool] = None
+    notify_on_comment_mention: Optional[bool] = None
+
+# Email Templates
+EMAIL_TEMPLATES = {
+    "ticket_created": {
+        "subject": "Yeni Destek Talebi Oluşturuldu - {ticket_number}",
+        "body": """
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #2563eb;">Yeni Destek Talebi</h2>
+                <p>Sayın {customer_name},</p>
+                <p>Destek talebiniz başarıyla oluşturulmuştur.</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                    <tr style="background: #f3f4f6;">
+                        <td style="padding: 10px; border: 1px solid #e5e7eb;"><strong>Talep No:</strong></td>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb;">{ticket_number}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb;"><strong>Konu:</strong></td>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb;">{title}</td>
+                    </tr>
+                    <tr style="background: #f3f4f6;">
+                        <td style="padding: 10px; border: 1px solid #e5e7eb;"><strong>Öncelik:</strong></td>
+                        <td style="padding: 10px; border: 1px solid #e5e7eb;">{priority}</td>
+                    </tr>
+                </table>
+                <p>Talebiniz en kısa sürede değerlendirilecektir.</p>
+                <p style="color: #6b7280; font-size: 12px;">Bu otomatik bir bildirimdir.</p>
+            </div>
+        </body>
+        </html>
+        """
+    },
+    "ticket_assigned": {
+        "subject": "Destek Talebi Atandı - {ticket_number}",
+        "body": """
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #2563eb;">Destek Talebi Atandı</h2>
+                <p>Sayın {customer_name},</p>
+                <p><strong>{ticket_number}</strong> numaralı destek talebiniz <strong>{assignee_name}</strong> tarafından üstlenilmiştir.</p>
+                <p>Konu: {title}</p>
+                <p>En kısa sürede sizinle iletişime geçilecektir.</p>
+                <p style="color: #6b7280; font-size: 12px;">Bu otomatik bir bildirimdir.</p>
+            </div>
+        </body>
+        </html>
+        """
+    },
+    "ticket_resolved": {
+        "subject": "Destek Talebi Çözümlendi - {ticket_number}",
+        "body": """
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #16a34a;">Destek Talebi Çözümlendi</h2>
+                <p>Sayın {customer_name},</p>
+                <p><strong>{ticket_number}</strong> numaralı destek talebiniz çözümlenmiştir.</p>
+                <p>Konu: {title}</p>
+                <p>Hizmetimizden memnun kaldıysanız seviniriz. Herhangi bir sorunuz olursa bizimle iletişime geçebilirsiniz.</p>
+                <p style="color: #6b7280; font-size: 12px;">Bu otomatik bir bildirimdir.</p>
+            </div>
+        </body>
+        </html>
+        """
+    },
+    "sla_risk": {
+        "subject": "⚠️ SLA Risk Uyarısı - {ticket_number}",
+        "body": """
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #dc2626;">SLA Risk Uyarısı</h2>
+                <p><strong>{ticket_number}</strong> numaralı ticket SLA süresini aşmak üzere!</p>
+                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                    <tr style="background: #fef2f2;">
+                        <td style="padding: 10px; border: 1px solid #fecaca;"><strong>Ticket:</strong></td>
+                        <td style="padding: 10px; border: 1px solid #fecaca;">{ticket_number}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #fecaca;"><strong>Konu:</strong></td>
+                        <td style="padding: 10px; border: 1px solid #fecaca;">{title}</td>
+                    </tr>
+                    <tr style="background: #fef2f2;">
+                        <td style="padding: 10px; border: 1px solid #fecaca;"><strong>SLA Bitiş:</strong></td>
+                        <td style="padding: 10px; border: 1px solid #fecaca;">{sla_deadline}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #fecaca;"><strong>Atanan:</strong></td>
+                        <td style="padding: 10px; border: 1px solid #fecaca;">{assignee_name}</td>
+                    </tr>
+                </table>
+                <p style="color: #dc2626;"><strong>Lütfen acil müdahale edin!</strong></p>
+            </div>
+        </body>
+        </html>
+        """
+    },
+    "comment_mention": {
+        "subject": "Bir yorumda bahsedildiniz - {ticket_number}",
+        "body": """
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #2563eb;">Yeni Bahsetme</h2>
+                <p><strong>{mentioned_by}</strong> sizi <strong>{ticket_number}</strong> numaralı ticket'ta bir yorumda bahsetti:</p>
+                <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <p style="margin: 0;">{comment}</p>
+                </div>
+                <p style="color: #6b7280; font-size: 12px;">Bu otomatik bir bildirimdir.</p>
+            </div>
+        </body>
+        </html>
+        """
+    }
+}
+
+SMS_TEMPLATES = {
+    "ticket_created": "{ticket_number} numarali destek talebiniz olusturuldu. Konu: {title}",
+    "ticket_assigned": "{ticket_number} no'lu talebiniz {assignee_name} tarafindan ustlenildi.",
+    "ticket_resolved": "{ticket_number} no'lu destek talebiniz cozumlendi.",
+    "sla_risk": "UYARI: {ticket_number} ticket SLA suresi dolmak uzere! Acil mudahale gerekli.",
+}
+
+# Notification Service Functions
+async def get_notification_settings():
+    settings = await db.notification_settings.find_one({}, {"_id": 0})
+    if not settings:
+        default_settings = NotificationSettings()
+        doc = default_settings.model_dump()
+        doc['updated_at'] = doc['updated_at'].isoformat()
+        await db.notification_settings.insert_one(doc)
+        return default_settings
+    if isinstance(settings.get('updated_at'), str):
+        settings['updated_at'] = datetime.fromisoformat(settings['updated_at'])
+    return NotificationSettings(**settings)
+
+async def send_email_notification(to_email: str, subject: str, html_content: str):
+    if not RESEND_AVAILABLE:
+        logging.warning("Resend not available, skipping email")
+        return {"status": "skipped", "reason": "Resend not configured"}
+    
+    resend_api_key = os.environ.get('RESEND_API_KEY')
+    if not resend_api_key:
+        logging.warning("RESEND_API_KEY not set, skipping email")
+        return {"status": "skipped", "reason": "API key not configured"}
+    
+    resend.api_key = resend_api_key
+    sender_email = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
+    
+    params = {
+        "from": sender_email,
+        "to": [to_email],
+        "subject": subject,
+        "html": html_content
+    }
+    
+    try:
+        email = await asyncio.to_thread(resend.Emails.send, params)
+        return {"status": "sent", "email_id": email.get("id")}
+    except Exception as e:
+        logging.error(f"Failed to send email: {str(e)}")
+        return {"status": "failed", "error": str(e)}
+
+async def send_sms_notification(to_phone: str, message: str):
+    if not NETGSM_AVAILABLE:
+        logging.warning("NetGSM not available, skipping SMS")
+        return {"status": "skipped", "reason": "NetGSM not configured"}
+    
+    settings = await get_notification_settings()
+    if not settings.netgsm_username or not settings.netgsm_password:
+        logging.warning("NetGSM credentials not set, skipping SMS")
+        return {"status": "skipped", "reason": "NetGSM credentials not configured"}
+    
+    try:
+        netgsm = Netgsm(
+            username=settings.netgsm_username,
+            password=settings.netgsm_password
+        )
+        
+        phone = to_phone.replace("+90", "").replace(" ", "").replace("-", "")
+        if phone.startswith("0"):
+            phone = phone[1:]
+        
+        response = netgsm.sms.send(
+            msgheader=settings.netgsm_header or "NETWORKOPS",
+            messages=[{"msg": message, "no": phone}]
+        )
+        
+        return {"status": "sent", "job_id": response.get("jobid")}
+    except Exception as e:
+        logging.error(f"Failed to send SMS: {str(e)}")
+        return {"status": "failed", "error": str(e)}
+
+async def send_notification(
+    notification_type: str,
+    template_data: dict,
+    recipient_email: Optional[str] = None,
+    recipient_phone: Optional[str] = None,
+    recipient_id: Optional[str] = None,
+    reference_type: Optional[str] = None,
+    reference_id: Optional[str] = None
+):
+    settings = await get_notification_settings()
+    results = []
+    
+    email_template = EMAIL_TEMPLATES.get(notification_type)
+    sms_template = SMS_TEMPLATES.get(notification_type)
+    
+    if settings.email_enabled and recipient_email and email_template:
+        subject = email_template["subject"].format(**template_data)
+        body = email_template["body"].format(**template_data)
+        
+        result = await send_email_notification(recipient_email, subject, body)
+        
+        notification = Notification(
+            recipient_id=recipient_id,
+            recipient_email=recipient_email,
+            notification_type=notification_type,
+            channel="email",
+            subject=subject,
+            content=body,
+            reference_type=reference_type,
+            reference_id=reference_id,
+            status="sent" if result["status"] == "sent" else "failed",
+            sent_at=datetime.now(timezone.utc) if result["status"] == "sent" else None,
+            error_message=result.get("error")
+        )
+        doc = notification.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        if doc['sent_at']:
+            doc['sent_at'] = doc['sent_at'].isoformat()
+        await db.notifications.insert_one(doc)
+        results.append({"channel": "email", **result})
+    
+    if settings.sms_enabled and recipient_phone and sms_template:
+        message = sms_template.format(**template_data)
+        
+        result = await send_sms_notification(recipient_phone, message)
+        
+        notification = Notification(
+            recipient_id=recipient_id,
+            recipient_phone=recipient_phone,
+            notification_type=notification_type,
+            channel="sms",
+            content=message,
+            reference_type=reference_type,
+            reference_id=reference_id,
+            status="sent" if result["status"] == "sent" else "failed",
+            sent_at=datetime.now(timezone.utc) if result["status"] == "sent" else None,
+            error_message=result.get("error")
+        )
+        doc = notification.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        if doc['sent_at']:
+            doc['sent_at'] = doc['sent_at'].isoformat()
+        await db.notifications.insert_one(doc)
+        results.append({"channel": "sms", **result})
+    
+    return results
+
+def extract_mentions(text: str) -> List[str]:
+    pattern = r'@(\w+)'
+    return re.findall(pattern, text)
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password):
