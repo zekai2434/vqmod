@@ -30,6 +30,10 @@ export default function TicketDetail() {
   const [updating, setUpdating] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [isInternalComment, setIsInternalComment] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [viewerImages, setViewerImages] = useState(null);
 
   useEffect(() => {
     fetchTicketDetails();
