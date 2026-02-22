@@ -18,11 +18,25 @@ import Reports from "@/pages/Reports";
 import NotificationSettings from "@/pages/NotificationSettings";
 import SLASettings from "@/pages/SLASettings";
 import RoleSettings from "@/pages/RoleSettings";
+import EmailSettings from "@/pages/EmailSettings";
+// Customer Portal
+import CustomerPortalLogin from "@/pages/CustomerPortalLogin";
+import CustomerPortalLayout from "@/components/CustomerPortalLayout";
+import CustomerPortalDashboard from "@/pages/CustomerPortalDashboard";
+import CustomerPortalTickets from "@/pages/CustomerPortalTickets";
+import CustomerPortalTicketDetail from "@/pages/CustomerPortalTicketDetail";
+import CustomerPortalNewTicket from "@/pages/CustomerPortalNewTicket";
+import CustomerPortalAssets from "@/pages/CustomerPortalAssets";
 import { Toaster } from "sonner";
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem('token');
   return token ? children : <Navigate to="/login" />;
+};
+
+const PortalPrivateRoute = ({ children }) => {
+  const token = localStorage.getItem('portal_token');
+  return token ? children : <Navigate to="/portal/login" />;
 };
 
 function App() {
@@ -31,6 +45,22 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          
+          {/* Customer Portal Routes */}
+          <Route path="/portal/login" element={<CustomerPortalLogin />} />
+          <Route path="/portal" element={
+            <PortalPrivateRoute>
+              <CustomerPortalLayout />
+            </PortalPrivateRoute>
+          }>
+            <Route index element={<CustomerPortalDashboard />} />
+            <Route path="tickets" element={<CustomerPortalTickets />} />
+            <Route path="tickets/new" element={<CustomerPortalNewTicket />} />
+            <Route path="tickets/:id" element={<CustomerPortalTicketDetail />} />
+            <Route path="assets" element={<CustomerPortalAssets />} />
+          </Route>
+          
+          {/* Admin Routes */}
           <Route path="/" element={
             <PrivateRoute>
               <DashboardLayout />
@@ -52,6 +82,7 @@ function App() {
             <Route path="notifications" element={<NotificationSettings />} />
             <Route path="sla-settings" element={<SLASettings />} />
             <Route path="roles" element={<RoleSettings />} />
+            <Route path="email-settings" element={<EmailSettings />} />
           </Route>
         </Routes>
       </BrowserRouter>
