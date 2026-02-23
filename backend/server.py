@@ -5629,55 +5629,312 @@ async def get_invoice_stats(current_user: User = Depends(get_current_user)):
         "collection_rate": round((total_paid / total_invoiced * 100) if total_invoiced > 0 else 0, 2)
     }
 
-# ========== PDF GENERATION ENDPOINTS ==========
+# ========== PDF GENERATION ENDPOINTS (FPDF2) ==========
 from fastapi.responses import StreamingResponse
 import io
+from fpdf import FPDF
 
-def generate_invoice_pdf_html(invoice: dict, customer: dict, settings: dict) -> str:
-    """Generate HTML for invoice PDF"""
-    items_html = ""
-    for item in invoice.get("items", []):
-        items_html += f"""
-        <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #eee;">{item.get('description', '')}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">{item.get('quantity', 1)}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₺{item.get('unit_price', 0):,.2f}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">%{item.get('tax_rate', 20)}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₺{item.get('total', 0):,.2f}</td>
-        </tr>
-        """
+class TurkishPDF(FPDF):
+    """FPDF with Turkish character support"""
+    def __init__(self):
+        super().__init__()
+        # Use built-in font with Latin encoding
+        self.add_font('DejaVu', '', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', uni=True)
+        self.add_font('DejaVu', 'B', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', uni=True)
+        self.set_auto_page_break(auto=True, margin=15)
+
+def generate_invoice_pdf(invoice: dict, customer: dict, settings: dict) -> bytes:
+    """Generate invoice PDF using fpdf2"""
+    pdf = TurkishPDF()
+    pdf.add_page()
     
-    logo_html = f'<img src="{settings.get("logo_url")}" style="max-height: 60px;" />' if settings.get("logo_url") else f'<h2 style="margin: 0; color: #1e293b;">{settings.get("company_name", "Şirket Adı")}</h2>'
+    company_name = settings.get("company_name", "Teknik Servis") if settings else "Teknik Servis"
+    company_address = settings.get("company_address", "") if settings else ""
     
-    return f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <style>
-            @page {{ size: A4; margin: 1cm; }}
-            body {{ font-family: Arial, sans-serif; font-size: 12px; color: #333; }}
-            .header {{ display: flex; justify-content: space-between; margin-bottom: 30px; }}
-            .invoice-title {{ font-size: 28px; font-weight: bold; color: #1e293b; }}
-            table {{ width: 100%; border-collapse: collapse; }}
-            th {{ background: #f1f5f9; padding: 10px; text-align: left; font-weight: 600; }}
-            .totals {{ margin-top: 20px; text-align: right; }}
-            .totals table {{ width: 300px; margin-left: auto; }}
-            .grand-total {{ font-size: 16px; font-weight: bold; background: #1e293b; color: white; }}
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <div>{logo_html}<p style="margin: 5px 0; color: #64748b;">{settings.get("company_address", "")}</p></div>
-            <div style="text-align: right;">
-                <div class="invoice-title">FATURA</div>
-                <p style="margin: 5px 0; font-size: 14px;">{invoice.get("invoice_number", "")}</p>
-                <p style="margin: 5px 0; color: #64748b;">Tarih: {invoice.get("created_at", "")[:10]}</p>
-                {f'<p style="margin: 5px 0; color: #64748b;">Vade: {invoice.get("due_date", "")}</p>' if invoice.get("due_date") else ""}
-            </div>
-        </div>
-        
-        <div style="margin-bottom: 30px;">
+    # Header
+    pdf.set_font('DejaVu', 'B', 16)
+    pdf.cell(0, 10, company_name, ln=True)
+    pdf.set_font('DejaVu', '', 10)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 5, company_address, ln=True)
+    pdf.ln(5)
+    
+    # Invoice title
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('DejaVu', 'B', 24)
+    pdf.cell(0, 10, "FATURA", ln=True, align='R')
+    pdf.set_font('DejaVu', '', 12)
+    pdf.cell(0, 6, f"No: {invoice.get('invoice_number', '')}", ln=True, align='R')
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 5, f"Tarih: {invoice.get('created_at', '')[:10]}", ln=True, align='R')
+    if invoice.get('due_date'):
+        pdf.cell(0, 5, f"Vade: {invoice.get('due_date', '')}", ln=True, align='R')
+    pdf.ln(10)
+    
+    # Customer info
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('DejaVu', 'B', 11)
+    pdf.cell(0, 6, "MÜŞTERI BILGILERI", ln=True)
+    pdf.set_font('DejaVu', '', 10)
+    pdf.cell(0, 5, f"Ad: {customer.get('name', '-')}", ln=True)
+    if customer.get('company'):
+        pdf.cell(0, 5, f"Firma: {customer.get('company', '')}", ln=True)
+    if customer.get('tax_number'):
+        pdf.cell(0, 5, f"VKN: {customer.get('tax_number', '')} - {customer.get('tax_office', '')}", ln=True)
+    pdf.cell(0, 5, f"Tel: {customer.get('phone', '-')}", ln=True)
+    pdf.ln(10)
+    
+    # Items table header
+    pdf.set_fill_color(241, 245, 249)
+    pdf.set_font('DejaVu', 'B', 10)
+    col_widths = [80, 20, 30, 20, 40]
+    headers = ['Açıklama', 'Adet', 'Birim Fiyat', 'KDV', 'Toplam']
+    for i, h in enumerate(headers):
+        pdf.cell(col_widths[i], 8, h, border=1, fill=True, align='C' if i > 0 else 'L')
+    pdf.ln()
+    
+    # Items
+    pdf.set_font('DejaVu', '', 9)
+    for item in invoice.get('items', []):
+        pdf.cell(col_widths[0], 7, str(item.get('description', ''))[:45], border=1)
+        pdf.cell(col_widths[1], 7, str(item.get('quantity', 1)), border=1, align='C')
+        pdf.cell(col_widths[2], 7, f"{item.get('unit_price', 0):,.2f} TL", border=1, align='R')
+        pdf.cell(col_widths[3], 7, f"%{item.get('tax_rate', 20)}", border=1, align='C')
+        pdf.cell(col_widths[4], 7, f"{item.get('total', 0):,.2f} TL", border=1, align='R')
+        pdf.ln()
+    
+    pdf.ln(5)
+    
+    # Totals
+    pdf.set_font('DejaVu', '', 10)
+    pdf.cell(150, 6, "Ara Toplam:", align='R')
+    pdf.cell(40, 6, f"{invoice.get('subtotal', 0):,.2f} TL", ln=True, align='R')
+    
+    if invoice.get('discount_total', 0) > 0:
+        pdf.cell(150, 6, "İskonto:", align='R')
+        pdf.cell(40, 6, f"-{invoice.get('discount_total', 0):,.2f} TL", ln=True, align='R')
+    
+    pdf.cell(150, 6, "KDV:", align='R')
+    pdf.cell(40, 6, f"+{invoice.get('tax_total', 0):,.2f} TL", ln=True, align='R')
+    
+    pdf.set_font('DejaVu', 'B', 12)
+    pdf.set_fill_color(30, 41, 59)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(150, 8, "GENEL TOPLAM:", align='R', fill=True)
+    pdf.cell(40, 8, f"{invoice.get('grand_total', 0):,.2f} TL", ln=True, align='R', fill=True)
+    
+    pdf.set_text_color(0, 0, 0)
+    
+    # Notes
+    if invoice.get('notes'):
+        pdf.ln(10)
+        pdf.set_font('DejaVu', 'B', 10)
+        pdf.cell(0, 6, "Notlar:", ln=True)
+        pdf.set_font('DejaVu', '', 9)
+        pdf.multi_cell(0, 5, invoice.get('notes', ''))
+    
+    return pdf.output()
+
+def generate_quote_pdf(quote: dict, customer: dict, settings: dict) -> bytes:
+    """Generate quote PDF using fpdf2"""
+    pdf = TurkishPDF()
+    pdf.add_page()
+    
+    company_name = settings.get("company_name", "Teknik Servis") if settings else "Teknik Servis"
+    company_address = settings.get("company_address", "") if settings else ""
+    
+    # Header
+    pdf.set_font('DejaVu', 'B', 16)
+    pdf.cell(0, 10, company_name, ln=True)
+    pdf.set_font('DejaVu', '', 10)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 5, company_address, ln=True)
+    pdf.ln(5)
+    
+    # Quote title
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('DejaVu', 'B', 24)
+    pdf.cell(0, 10, "TEKLIF", ln=True, align='R')
+    pdf.set_font('DejaVu', '', 12)
+    pdf.cell(0, 6, f"No: {quote.get('quote_number', '')}", ln=True, align='R')
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 5, f"Tarih: {quote.get('created_at', '')[:10]}", ln=True, align='R')
+    if quote.get('valid_until'):
+        pdf.cell(0, 5, f"Geçerlilik: {quote.get('valid_until', '')}", ln=True, align='R')
+    pdf.ln(10)
+    
+    # Subject
+    if quote.get('subject'):
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font('DejaVu', 'B', 12)
+        pdf.cell(0, 6, f"Konu: {quote.get('subject', '')}", ln=True)
+        pdf.ln(5)
+    
+    # Customer info
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('DejaVu', 'B', 11)
+    pdf.cell(0, 6, "MÜŞTERI BILGILERI", ln=True)
+    pdf.set_font('DejaVu', '', 10)
+    pdf.cell(0, 5, f"Ad: {customer.get('name', '-')}", ln=True)
+    if customer.get('company'):
+        pdf.cell(0, 5, f"Firma: {customer.get('company', '')}", ln=True)
+    pdf.cell(0, 5, f"Tel: {customer.get('phone', '-')}", ln=True)
+    pdf.ln(10)
+    
+    # Items table header
+    pdf.set_fill_color(241, 245, 249)
+    pdf.set_font('DejaVu', 'B', 10)
+    col_widths = [80, 20, 30, 20, 40]
+    headers = ['Açıklama', 'Adet', 'Birim Fiyat', 'KDV', 'Toplam']
+    for i, h in enumerate(headers):
+        pdf.cell(col_widths[i], 8, h, border=1, fill=True, align='C' if i > 0 else 'L')
+    pdf.ln()
+    
+    # Items
+    pdf.set_font('DejaVu', '', 9)
+    for item in quote.get('items', []):
+        desc = item.get('description', item.get('name', ''))
+        pdf.cell(col_widths[0], 7, str(desc)[:45], border=1)
+        pdf.cell(col_widths[1], 7, str(item.get('quantity', 1)), border=1, align='C')
+        unit_price = item.get('unit_price', item.get('price', 0))
+        pdf.cell(col_widths[2], 7, f"{unit_price:,.2f} TL", border=1, align='R')
+        tax_rate = item.get('tax_rate', item.get('vat_rate', 20))
+        pdf.cell(col_widths[3], 7, f"%{tax_rate}", border=1, align='C')
+        total = item.get('total', item.get('line_total', 0))
+        pdf.cell(col_widths[4], 7, f"{total:,.2f} TL", border=1, align='R')
+        pdf.ln()
+    
+    pdf.ln(5)
+    
+    # Totals
+    pdf.set_font('DejaVu', '', 10)
+    pdf.cell(150, 6, "Ara Toplam:", align='R')
+    pdf.cell(40, 6, f"{quote.get('subtotal', 0):,.2f} TL", ln=True, align='R')
+    
+    if quote.get('discount', 0) > 0:
+        pdf.cell(150, 6, "İskonto:", align='R')
+        pdf.cell(40, 6, f"-{quote.get('discount', 0):,.2f} TL", ln=True, align='R')
+    
+    pdf.cell(150, 6, "KDV:", align='R')
+    pdf.cell(40, 6, f"+{quote.get('tax_total', quote.get('vat_amount', 0)):,.2f} TL", ln=True, align='R')
+    
+    pdf.set_font('DejaVu', 'B', 12)
+    pdf.set_fill_color(30, 41, 59)
+    pdf.set_text_color(255, 255, 255)
+    pdf.cell(150, 8, "GENEL TOPLAM:", align='R', fill=True)
+    pdf.cell(40, 8, f"{quote.get('grand_total', quote.get('total', 0)):,.2f} TL", ln=True, align='R', fill=True)
+    
+    pdf.set_text_color(0, 0, 0)
+    
+    # Terms & Notes
+    if quote.get('payment_terms') or quote.get('terms'):
+        pdf.ln(10)
+        pdf.set_font('DejaVu', 'B', 10)
+        pdf.cell(0, 6, "Ödeme Koşulları:", ln=True)
+        pdf.set_font('DejaVu', '', 9)
+        pdf.multi_cell(0, 5, quote.get('payment_terms', quote.get('terms', '')))
+    
+    if quote.get('notes'):
+        pdf.ln(5)
+        pdf.set_font('DejaVu', 'B', 10)
+        pdf.cell(0, 6, "Notlar:", ln=True)
+        pdf.set_font('DejaVu', '', 9)
+        pdf.multi_cell(0, 5, quote.get('notes', ''))
+    
+    return pdf.output()
+
+def generate_service_report_pdf(ticket: dict, customer: dict, asset: dict, settings: dict) -> bytes:
+    """Generate service report PDF using fpdf2"""
+    pdf = TurkishPDF()
+    pdf.add_page()
+    
+    company_name = settings.get("company_name", "Teknik Servis") if settings else "Teknik Servis"
+    company_address = settings.get("company_address", "") if settings else ""
+    company_phone = settings.get("company_phone", "") if settings else ""
+    
+    status_labels = {"open": "Açık", "in_progress": "İşlemde", "pending": "Beklemede", "resolved": "Çözüldü", "closed": "Kapalı"}
+    priority_labels = {"low": "Düşük", "medium": "Orta", "high": "Yüksek", "critical": "Kritik"}
+    
+    # Header
+    pdf.set_font('DejaVu', 'B', 16)
+    pdf.cell(100, 10, company_name)
+    pdf.set_font('DejaVu', 'B', 20)
+    pdf.cell(0, 10, "SERVIS RAPORU", ln=True, align='R')
+    
+    pdf.set_font('DejaVu', '', 10)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(100, 5, company_address)
+    pdf.set_font('DejaVu', '', 12)
+    pdf.cell(0, 5, f"{ticket.get('ticket_number', '')}", ln=True, align='R')
+    pdf.cell(100, 5, company_phone)
+    pdf.cell(0, 5, "", ln=True)
+    
+    pdf.set_draw_color(37, 99, 235)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(10)
+    
+    # Customer section
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font('DejaVu', 'B', 11)
+    pdf.set_fill_color(241, 245, 249)
+    pdf.cell(0, 7, "MÜŞTERI BILGILERI", ln=True, fill=True)
+    pdf.set_font('DejaVu', '', 10)
+    pdf.cell(95, 6, f"Ad: {customer.get('name', '-') if customer else '-'}")
+    pdf.cell(95, 6, f"Firma: {customer.get('company', '-') if customer else '-'}", ln=True)
+    pdf.cell(95, 6, f"Telefon: {customer.get('phone', '-') if customer else '-'}")
+    pdf.cell(95, 6, f"E-posta: {customer.get('email', '-') if customer else '-'}", ln=True)
+    pdf.ln(5)
+    
+    # Device section
+    pdf.set_font('DejaVu', 'B', 11)
+    pdf.cell(0, 7, "CIHAZ BILGILERI", ln=True, fill=True)
+    pdf.set_font('DejaVu', '', 10)
+    pdf.cell(95, 6, f"Cihaz: {asset.get('name', '-') if asset else '-'}")
+    pdf.cell(95, 6, f"Marka/Model: {asset.get('brand', '-') if asset else '-'} / {asset.get('model', '-') if asset else '-'}", ln=True)
+    pdf.cell(95, 6, f"Seri No: {asset.get('serial_number', '-') if asset else '-'}")
+    pdf.cell(95, 6, f"Tip: {asset.get('type', '-') if asset else '-'}", ln=True)
+    pdf.ln(5)
+    
+    # Service details
+    pdf.set_font('DejaVu', 'B', 11)
+    pdf.cell(0, 7, "SERVIS DETAYLARI", ln=True, fill=True)
+    pdf.set_font('DejaVu', '', 10)
+    created_date = ticket.get("created_at", "")[:10] if ticket.get("created_at") else "-"
+    pdf.cell(95, 6, f"Kayıt Tarihi: {created_date}")
+    pdf.cell(95, 6, f"Öncelik: {priority_labels.get(ticket.get('priority', 'medium'), 'Orta')}", ln=True)
+    pdf.cell(95, 6, f"Kategori: {ticket.get('category', '-')}")
+    pdf.cell(95, 6, f"Durum: {status_labels.get(ticket.get('status', 'open'), 'Açık')}", ln=True)
+    pdf.ln(5)
+    
+    # Issue description
+    pdf.set_font('DejaVu', 'B', 11)
+    pdf.cell(0, 7, "ARIZA AÇIKLAMASI", ln=True, fill=True)
+    pdf.set_font('DejaVu', 'B', 10)
+    pdf.cell(0, 6, ticket.get('title', ''), ln=True)
+    pdf.set_font('DejaVu', '', 10)
+    pdf.multi_cell(0, 5, ticket.get('description', '-'))
+    pdf.ln(5)
+    
+    # Resolution/Notes
+    pdf.set_font('DejaVu', 'B', 11)
+    pdf.cell(0, 7, "YAPILAN ISLEMLER / NOTLAR", ln=True, fill=True)
+    pdf.set_font('DejaVu', '', 10)
+    notes = ticket.get('resolution_notes', ticket.get('internal_notes', ''))
+    if notes:
+        pdf.multi_cell(0, 5, notes)
+    else:
+        pdf.cell(0, 20, "", ln=True)
+    
+    pdf.ln(15)
+    
+    # Signature section
+    pdf.set_font('DejaVu', '', 10)
+    pdf.cell(95, 6, "_" * 30, align='C')
+    pdf.cell(95, 6, "_" * 30, align='C', ln=True)
+    pdf.cell(95, 6, "Teknisyen İmzası", align='C')
+    pdf.cell(95, 6, "Müşteri İmzası", align='C', ln=True)
+    
+    return pdf.output()
             <h3 style="color: #64748b; font-size: 11px; margin-bottom: 5px;">FATURA EDİLEN</h3>
             <p style="margin: 3px 0; font-weight: bold;">{customer.get("name", "")}</p>
             <p style="margin: 3px 0;">{customer.get("company", "")}</p>
