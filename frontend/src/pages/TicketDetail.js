@@ -905,6 +905,146 @@ export default function TicketDetail() {
         </div>
       </div>
 
+      {/* Edit Ticket Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Ticket Düzenle</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Başlık *</Label>
+              <Input
+                id="edit-title"
+                data-testid="edit-ticket-title"
+                value={editFormData.title}
+                onChange={(e) => setEditFormData({...editFormData, title: e.target.value})}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Açıklama *</Label>
+              <Textarea
+                id="edit-description"
+                data-testid="edit-ticket-description"
+                value={editFormData.description}
+                onChange={(e) => setEditFormData({...editFormData, description: e.target.value})}
+                rows={4}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Kategori *</Label>
+                <Select 
+                  value={editFormData.category} 
+                  onValueChange={(v) => setEditFormData({...editFormData, category: v})}
+                >
+                  <SelectTrigger data-testid="edit-ticket-category">
+                    <SelectValue placeholder="Kategori seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="network">Network</SelectItem>
+                    <SelectItem value="hardware">Donanım</SelectItem>
+                    <SelectItem value="software">Yazılım</SelectItem>
+                    <SelectItem value="security">Güvenlik</SelectItem>
+                    <SelectItem value="other">Diğer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Öncelik *</Label>
+                <Select 
+                  value={editFormData.priority} 
+                  onValueChange={(v) => setEditFormData({...editFormData, priority: v})}
+                >
+                  <SelectTrigger data-testid="edit-ticket-priority">
+                    <SelectValue placeholder="Öncelik seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="critical">Kritik</SelectItem>
+                    <SelectItem value="high">Yüksek</SelectItem>
+                    <SelectItem value="medium">Orta</SelectItem>
+                    <SelectItem value="low">Düşük</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Atanan Teknisyen</Label>
+              <Select 
+                value={editFormData.assigned_to} 
+                onValueChange={(v) => setEditFormData({...editFormData, assigned_to: v})}
+              >
+                <SelectTrigger data-testid="edit-ticket-assignee">
+                  <SelectValue placeholder="Teknisyen seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Atanmamış</SelectItem>
+                  {technicians.map(u => (
+                    <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Asset Selection - KEY FEATURE */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <HardDrive className="w-4 h-4" />
+                Cihaz
+              </Label>
+              <Select 
+                value={editFormData.asset_id} 
+                onValueChange={(v) => setEditFormData({...editFormData, asset_id: v})}
+              >
+                <SelectTrigger data-testid="edit-ticket-asset">
+                  <SelectValue placeholder="Cihaz seçin (opsiyonel)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Cihaz Yok</SelectItem>
+                  {assets.map(a => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.brand} {a.model} - {a.serial_number}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {assets.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Bu müşteriye ait kayıtlı cihaz bulunmuyor.
+                </p>
+              )}
+              {editFormData.asset_id && editFormData.asset_id !== (ticket.asset_id || "") && (
+                <p className="text-xs text-amber-600">
+                  Cihaz değişikliği zaman çizelgesine kaydedilecek.
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-4 border-t">
+              <Button 
+                onClick={handleEditTicket} 
+                disabled={savingEdit}
+                data-testid="save-ticket-edit"
+              >
+                {savingEdit ? "Kaydediliyor..." : "Kaydet"}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setEditDialogOpen(false)}
+              >
+                İptal
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {viewerImages && (
         <ImageViewer
           images={viewerImages}
