@@ -1,15 +1,13 @@
 import { useEffect, useState, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, FileText, Printer, ArrowLeft, Save, Building2, Package, Calculator, Calendar, CreditCard } from "lucide-react";
+import { Plus, Trash2, FileText, Printer, ArrowLeft, Building2, Package, Calendar, CreditCard } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
 
@@ -18,7 +16,6 @@ const API = `${BACKEND_URL}/api`;
 
 export default function QuoteCreate() {
   const navigate = useNavigate();
-  const { quoteId } = useParams();
   const printRef = useRef();
   const [settings, setSettings] = useState(null);
   const [customers, setCustomers] = useState([]);
@@ -64,7 +61,6 @@ export default function QuoteCreate() {
       setParts(partsRes.data);
       setSettings(settingsRes.data);
       
-      // Generate quote number
       const quoteNum = `TKL-${Date.now().toString().slice(-6)}`;
       setFormData(prev => ({ ...prev, quote_number: quoteNum }));
     } catch (error) {
@@ -152,50 +148,48 @@ export default function QuoteCreate() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-screen bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      {/* Controls - Hidden on print */}
+    <div className="min-h-screen bg-gray-100">
+      {/* Controls */}
       <div className="print:hidden sticky top-0 z-10 bg-white border-b shadow-sm p-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <Button variant="outline" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Geri Dön
           </Button>
-          <div className="flex gap-2">
-            <Button onClick={handlePrint} disabled={formData.items.length === 0}>
-              <Printer className="w-4 h-4 mr-2" />
-              Yazdır / PDF
-            </Button>
-          </div>
+          <Button onClick={handlePrint} disabled={formData.items.length === 0} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Printer className="w-4 h-4 mr-2" />
+            Yazdır / PDF
+          </Button>
         </div>
       </div>
 
       <div className="max-w-5xl mx-auto p-8 print:p-4 print:max-w-full">
-        {/* Form Section - Hidden on print */}
+        {/* Form Section */}
         <div className="print:hidden space-y-6 mb-8">
-          <Card>
+          <Card className="bg-white">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-gray-900">
+                <FileText className="w-5 h-5 text-blue-600" />
                 Teklif Bilgileri
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
-                  <Label>Teklif No</Label>
-                  <Input value={formData.quote_number} readOnly className="font-mono" />
+                  <Label className="text-gray-700">Teklif No</Label>
+                  <Input value={formData.quote_number} readOnly className="font-mono bg-gray-50 text-gray-900" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Müşteri *</Label>
+                  <Label className="text-gray-700">Müşteri *</Label>
                   <Select value={formData.customer_id} onValueChange={(v) => setFormData({...formData, customer_id: v})}>
-                    <SelectTrigger data-testid="quote-customer-select">
+                    <SelectTrigger className="text-gray-900">
                       <SelectValue placeholder="Müşteri seçin" />
                     </SelectTrigger>
                     <SelectContent>
@@ -206,18 +200,19 @@ export default function QuoteCreate() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Geçerlilik (Gün)</Label>
+                  <Label className="text-gray-700">Geçerlilik (Gün)</Label>
                   <Input
                     type="number"
                     value={formData.validity_days}
                     onChange={(e) => setFormData({...formData, validity_days: parseInt(e.target.value) || 30})}
                     min="1"
+                    className="text-gray-900"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Ödeme Koşulu</Label>
+                  <Label className="text-gray-700">Ödeme Koşulu</Label>
                   <Select value={formData.payment_terms} onValueChange={(v) => setFormData({...formData, payment_terms: v})}>
-                    <SelectTrigger>
+                    <SelectTrigger className="text-gray-900">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -235,33 +230,35 @@ export default function QuoteCreate() {
               </div>
               
               <div className="space-y-2">
-                <Label>Konu</Label>
+                <Label className="text-gray-700">Konu</Label>
                 <Input
                   value={formData.subject}
                   onChange={(e) => setFormData({...formData, subject: e.target.value})}
                   placeholder="Teklif konusu..."
+                  className="text-gray-900"
                 />
               </div>
             </CardContent>
           </Card>
 
           {/* Add Items */}
-          <Card>
+          <Card className="bg-white">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-gray-900">
+                <Package className="w-5 h-5 text-blue-600" />
                 Ürün/Hizmet Ekle
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                 <div className="md:col-span-2 space-y-2">
-                  <Label>Açıklama</Label>
+                  <Label className="text-gray-700">Açıklama</Label>
                   <div className="flex gap-2">
                     <Input
                       value={newItem.description}
                       onChange={(e) => setNewItem({...newItem, description: e.target.value})}
                       placeholder="Ürün veya hizmet"
+                      className="text-gray-900"
                     />
                     <Select onValueChange={selectPart}>
                       <SelectTrigger className="w-12">
@@ -278,28 +275,30 @@ export default function QuoteCreate() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Miktar</Label>
+                  <Label className="text-gray-700">Miktar</Label>
                   <Input
                     type="number"
                     value={newItem.quantity}
                     onChange={(e) => setNewItem({...newItem, quantity: parseInt(e.target.value) || 1})}
                     min="1"
+                    className="text-gray-900"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Birim Fiyat (₺)</Label>
+                  <Label className="text-gray-700">Birim Fiyat (₺)</Label>
                   <Input
                     type="number"
                     value={newItem.unit_price}
                     onChange={(e) => setNewItem({...newItem, unit_price: parseFloat(e.target.value) || 0})}
                     min="0"
                     step="0.01"
+                    className="text-gray-900"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>KDV (%)</Label>
+                  <Label className="text-gray-700">KDV (%)</Label>
                   <Select value={newItem.vat_rate.toString()} onValueChange={(v) => setNewItem({...newItem, vat_rate: parseInt(v)})}>
-                    <SelectTrigger>
+                    <SelectTrigger className="text-gray-900">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -311,8 +310,8 @@ export default function QuoteCreate() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>&nbsp;</Label>
-                  <Button onClick={addItem} className="w-full">
+                  <Label className="text-gray-700">&nbsp;</Label>
+                  <Button onClick={addItem} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                     <Plus className="w-4 h-4 mr-2" />
                     Ekle
                   </Button>
@@ -324,22 +323,22 @@ export default function QuoteCreate() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Açıklama</TableHead>
-                      <TableHead className="text-right">Miktar</TableHead>
-                      <TableHead className="text-right">Birim Fiyat</TableHead>
-                      <TableHead className="text-right">KDV</TableHead>
-                      <TableHead className="text-right">Toplam</TableHead>
+                      <TableHead className="text-gray-700">Açıklama</TableHead>
+                      <TableHead className="text-right text-gray-700">Miktar</TableHead>
+                      <TableHead className="text-right text-gray-700">Birim Fiyat</TableHead>
+                      <TableHead className="text-right text-gray-700">KDV</TableHead>
+                      <TableHead className="text-right text-gray-700">Toplam</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {formData.items.map((item) => (
                       <TableRow key={item.id}>
-                        <TableCell>{item.description}</TableCell>
-                        <TableCell className="text-right">{item.quantity} {item.unit}</TableCell>
-                        <TableCell className="text-right">{item.unit_price.toLocaleString('tr-TR')} ₺</TableCell>
-                        <TableCell className="text-right">%{item.vat_rate}</TableCell>
-                        <TableCell className="text-right font-medium">{item.total.toLocaleString('tr-TR')} ₺</TableCell>
+                        <TableCell className="text-gray-900">{item.description}</TableCell>
+                        <TableCell className="text-right text-gray-900">{item.quantity} {item.unit}</TableCell>
+                        <TableCell className="text-right text-gray-900">{item.unit_price.toLocaleString('tr-TR')} ₺</TableCell>
+                        <TableCell className="text-right text-gray-900">%{item.vat_rate}</TableCell>
+                        <TableCell className="text-right font-medium text-gray-900">{item.total.toLocaleString('tr-TR')} ₺</TableCell>
                         <TableCell>
                           <Button variant="ghost" size="sm" onClick={() => removeItem(item.id)}>
                             <Trash2 className="w-4 h-4 text-red-500" />
@@ -354,56 +353,57 @@ export default function QuoteCreate() {
           </Card>
 
           <div className="space-y-2">
-            <Label>Notlar</Label>
+            <Label className="text-gray-700">Notlar</Label>
             <Textarea
               value={formData.notes}
               onChange={(e) => setFormData({...formData, notes: e.target.value})}
               placeholder="Ek notlar, şartlar..."
               rows={3}
+              className="text-gray-900 bg-white"
             />
           </div>
         </div>
 
         {/* Print Preview */}
-        <div ref={printRef} className={`bg-white rounded-lg shadow-lg print:shadow-none p-8 print:p-4 ${isPrintMode || formData.items.length > 0 ? '' : 'print:hidden'}`}>
+        <div ref={printRef} className={`bg-white rounded-lg shadow-lg print:shadow-none p-8 print:p-4 text-gray-900 ${isPrintMode || formData.items.length > 0 ? '' : 'print:hidden'}`}>
           {/* Header */}
-          <div className="flex items-start justify-between border-b pb-6 mb-6">
+          <div className="flex items-start justify-between border-b border-gray-300 pb-6 mb-6">
             <div className="flex items-center gap-4">
               {settings?.logo_url ? (
                 <img src={settings.logo_url} alt="Logo" className="h-16 object-contain" />
               ) : (
-                <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <FileText className="w-8 h-8 text-primary" />
+                <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <FileText className="w-8 h-8 text-blue-600" />
                 </div>
               )}
               <div>
-                <h1 className="text-2xl font-bold">{settings?.company_name || "Firma Adı"}</h1>
-                <p className="text-muted-foreground">TEKLİF</p>
+                <h1 className="text-2xl font-bold text-gray-900">{settings?.company_name || "Firma Adı"}</h1>
+                <p className="text-gray-600">TEKLİF</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-sm text-muted-foreground">Teklif No</p>
-              <p className="font-mono font-bold text-lg">{formData.quote_number}</p>
-              <p className="text-sm text-muted-foreground mt-2">Tarih</p>
-              <p className="font-medium">{new Date().toLocaleDateString('tr-TR')}</p>
+              <p className="text-sm text-gray-500">Teklif No</p>
+              <p className="font-mono font-bold text-lg text-gray-900">{formData.quote_number}</p>
+              <p className="text-sm text-gray-500 mt-2">Tarih</p>
+              <p className="font-medium text-gray-900">{new Date().toLocaleDateString('tr-TR')}</p>
             </div>
           </div>
 
           {/* Customer Info */}
           {getCustomer() && (
-            <div className="mb-6 p-4 bg-slate-50 rounded-lg">
-              <h2 className="font-semibold mb-2 flex items-center gap-2">
-                <Building2 className="w-4 h-4" />
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <h2 className="font-semibold mb-2 flex items-center gap-2 text-gray-900">
+                <Building2 className="w-4 h-4 text-blue-600" />
                 Müşteri Bilgileri
               </h2>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p><span className="text-muted-foreground">Firma:</span> {getCustomer().company || getCustomer().name}</p>
-                  <p><span className="text-muted-foreground">Yetkili:</span> {getCustomer().name}</p>
+                  <p className="text-gray-900"><span className="text-gray-600">Firma:</span> {getCustomer().company || getCustomer().name}</p>
+                  <p className="text-gray-900"><span className="text-gray-600">Yetkili:</span> {getCustomer().name}</p>
                 </div>
                 <div>
-                  <p><span className="text-muted-foreground">Telefon:</span> {getCustomer().phone || "-"}</p>
-                  <p><span className="text-muted-foreground">E-posta:</span> {getCustomer().email || "-"}</p>
+                  <p className="text-gray-900"><span className="text-gray-600">Telefon:</span> {getCustomer().phone || "-"}</p>
+                  <p className="text-gray-900"><span className="text-gray-600">E-posta:</span> {getCustomer().email || "-"}</p>
                 </div>
               </div>
             </div>
@@ -412,103 +412,103 @@ export default function QuoteCreate() {
           {/* Subject */}
           {formData.subject && (
             <div className="mb-6">
-              <p className="text-sm text-muted-foreground">Konu</p>
-              <p className="font-medium">{formData.subject}</p>
+              <p className="text-sm text-gray-600">Konu</p>
+              <p className="font-medium text-gray-900">{formData.subject}</p>
             </div>
           )}
 
           {/* Items Table */}
-          <Table className="mb-6">
-            <TableHeader>
-              <TableRow className="bg-slate-50">
-                <TableHead className="w-[40%]">Açıklama</TableHead>
-                <TableHead className="text-right">Miktar</TableHead>
-                <TableHead className="text-right">Birim Fiyat</TableHead>
-                <TableHead className="text-right">KDV</TableHead>
-                <TableHead className="text-right">Toplam</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <table className="w-full mb-6 border-collapse">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="text-left p-3 border border-gray-300 text-gray-900 w-[40%]">Açıklama</th>
+                <th className="text-right p-3 border border-gray-300 text-gray-900">Miktar</th>
+                <th className="text-right p-3 border border-gray-300 text-gray-900">Birim Fiyat</th>
+                <th className="text-right p-3 border border-gray-300 text-gray-900">KDV</th>
+                <th className="text-right p-3 border border-gray-300 text-gray-900">Toplam</th>
+              </tr>
+            </thead>
+            <tbody>
               {formData.items.map((item, index) => (
-                <TableRow key={index}>
-                  <TableCell>{item.description}</TableCell>
-                  <TableCell className="text-right">{item.quantity} {item.unit}</TableCell>
-                  <TableCell className="text-right">{item.unit_price.toLocaleString('tr-TR')} ₺</TableCell>
-                  <TableCell className="text-right">%{item.vat_rate}</TableCell>
-                  <TableCell className="text-right font-medium">{item.total.toLocaleString('tr-TR')} ₺</TableCell>
-                </TableRow>
+                <tr key={index}>
+                  <td className="p-3 border border-gray-300 text-gray-900">{item.description}</td>
+                  <td className="text-right p-3 border border-gray-300 text-gray-900">{item.quantity} {item.unit}</td>
+                  <td className="text-right p-3 border border-gray-300 text-gray-900">{item.unit_price.toLocaleString('tr-TR')} ₺</td>
+                  <td className="text-right p-3 border border-gray-300 text-gray-900">%{item.vat_rate}</td>
+                  <td className="text-right p-3 border border-gray-300 font-medium text-gray-900">{item.total.toLocaleString('tr-TR')} ₺</td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
 
           {/* Totals */}
           <div className="flex justify-end mb-6">
             <div className="w-64 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Ara Toplam:</span>
-                <span>{totals.subtotal.toLocaleString('tr-TR')} ₺</span>
+                <span className="text-gray-600">Ara Toplam:</span>
+                <span className="text-gray-900">{totals.subtotal.toLocaleString('tr-TR')} ₺</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">KDV Toplam:</span>
-                <span>{totals.totalVat.toLocaleString('tr-TR')} ₺</span>
+                <span className="text-gray-600">KDV Toplam:</span>
+                <span className="text-gray-900">{totals.totalVat.toLocaleString('tr-TR')} ₺</span>
               </div>
-              <div className="flex justify-between font-bold text-lg border-t pt-2">
-                <span>Genel Toplam:</span>
-                <span className="text-primary">{totals.grandTotal.toLocaleString('tr-TR')} ₺</span>
+              <div className="flex justify-between font-bold text-lg border-t border-gray-300 pt-2">
+                <span className="text-gray-900">Genel Toplam:</span>
+                <span className="text-blue-600">{totals.grandTotal.toLocaleString('tr-TR')} ₺</span>
               </div>
             </div>
           </div>
 
           {/* Terms */}
           <div className="grid grid-cols-2 gap-6 mb-6 text-sm">
-            <div className="p-4 border rounded-lg">
-              <h3 className="font-semibold mb-2 flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
+            <div className="p-4 border border-gray-200 rounded-lg">
+              <h3 className="font-semibold mb-2 flex items-center gap-2 text-gray-900">
+                <Calendar className="w-4 h-4 text-blue-600" />
                 Geçerlilik
               </h3>
-              <p>Bu teklif <strong>{formData.validity_days}</strong> gün geçerlidir.</p>
-              <p className="text-muted-foreground">
+              <p className="text-gray-900">Bu teklif <strong>{formData.validity_days}</strong> gün geçerlidir.</p>
+              <p className="text-gray-600">
                 Son geçerlilik: {new Date(Date.now() + formData.validity_days * 24 * 60 * 60 * 1000).toLocaleDateString('tr-TR')}
               </p>
             </div>
-            <div className="p-4 border rounded-lg">
-              <h3 className="font-semibold mb-2 flex items-center gap-2">
-                <CreditCard className="w-4 h-4" />
+            <div className="p-4 border border-gray-200 rounded-lg">
+              <h3 className="font-semibold mb-2 flex items-center gap-2 text-gray-900">
+                <CreditCard className="w-4 h-4 text-blue-600" />
                 Ödeme Koşulları
               </h3>
-              <p><strong>{paymentTermsLabels[formData.payment_terms]}</strong></p>
-              {formData.payment_notes && <p className="text-muted-foreground">{formData.payment_notes}</p>}
+              <p className="text-gray-900"><strong>{paymentTermsLabels[formData.payment_terms]}</strong></p>
+              {formData.payment_notes && <p className="text-gray-600">{formData.payment_notes}</p>}
             </div>
           </div>
 
           {/* Notes */}
           {formData.notes && (
-            <div className="mb-6 p-4 bg-slate-50 rounded-lg">
-              <h3 className="font-semibold mb-2">Notlar</h3>
-              <p className="text-sm whitespace-pre-wrap">{formData.notes}</p>
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <h3 className="font-semibold mb-2 text-gray-900">Notlar</h3>
+              <p className="text-sm whitespace-pre-wrap text-gray-900">{formData.notes}</p>
             </div>
           )}
 
-          {/* Signature */}
-          <div className="grid grid-cols-2 gap-8 pt-8 border-t">
+          {/* Signatures */}
+          <div className="grid grid-cols-2 gap-8 pt-8 border-t border-gray-300">
             <div className="space-y-4">
-              <h3 className="font-semibold text-center">Teklifi Veren</h3>
-              <div className="h-20 border-b-2 border-slate-300"></div>
-              <p className="text-center text-sm text-muted-foreground">
+              <h3 className="font-semibold text-center text-gray-900">Teklifi Veren</h3>
+              <div className="h-20 border-b-2 border-gray-400"></div>
+              <p className="text-center text-sm text-gray-600">
                 {settings?.company_name || "Firma"}
               </p>
             </div>
             <div className="space-y-4">
-              <h3 className="font-semibold text-center">Onaylayan</h3>
-              <div className="h-20 border-b-2 border-slate-300"></div>
-              <p className="text-center text-sm text-muted-foreground">
+              <h3 className="font-semibold text-center text-gray-900">Onaylayan</h3>
+              <div className="h-20 border-b-2 border-gray-400"></div>
+              <p className="text-center text-sm text-gray-600">
                 {getCustomer()?.name || "Müşteri"}
               </p>
             </div>
           </div>
 
           {/* Footer */}
-          <div className="text-center text-xs text-muted-foreground pt-6 mt-6 border-t">
+          <div className="text-center text-xs text-gray-500 pt-6 mt-6 border-t border-gray-200">
             <p>Bu teklif {settings?.company_name || "Firma"} tarafından hazırlanmıştır.</p>
             <p>© {new Date().getFullYear()} - Tüm hakları saklıdır.</p>
           </div>
