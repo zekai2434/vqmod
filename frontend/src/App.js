@@ -11,6 +11,7 @@ import CustomerDetail from "@/pages/CustomerDetail";
 import AssetList from "@/pages/AssetList";
 import PartList from "@/pages/PartList";
 import RMAList from "@/pages/RMAList";
+import ContractList from "@/pages/ContractList";
 import WorkOrderList from "@/pages/WorkOrderList";
 import WorkOrderDetail from "@/pages/WorkOrderDetail";
 import UserList from "@/pages/UserList";
