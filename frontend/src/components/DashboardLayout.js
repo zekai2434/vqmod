@@ -93,15 +93,21 @@ export default function DashboardLayout() {
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-4 border-b border-zinc-800/60">
             <Link to="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                <Activity className="w-5 h-5 text-white" strokeWidth={2.5} />
-              </div>
+              {systemSettings?.logo_url ? (
+                <img src={systemSettings.logo_url} alt="Logo" className="w-10 h-10 rounded-xl object-contain" />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                  <Activity className="w-5 h-5 text-white" strokeWidth={2.5} />
+                </div>
+              )}
               {!collapsed && (
                 <div>
                   <h1 className="text-lg font-bold text-white tracking-tight" style={{fontFamily: 'Chivo, sans-serif'}}>
-                    NetOps
+                    {systemSettings?.company_name?.split(' ')[0] || 'NetOps'}
                   </h1>
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Pro</p>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                    {systemSettings?.company_name?.split(' ').slice(1).join(' ') || systemSettings?.company_slogan || 'Pro'}
+                  </p>
                 </div>
               )}
             </Link>
