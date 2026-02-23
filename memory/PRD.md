@@ -30,7 +30,13 @@ Network cihazları için kapsamlı teknik servis yönetim yazılımı.
 
 ## Son Güncelleme (23 Şubat 2026)
 
-### PDF İndirme Özelliği - YENİ ✅
+### Sistem Ayarları - Entegrasyonlar Sekmesi (YENİ) ✅
+- [x] **BizimHesap E-Fatura Yapılandırma**: Firm ID girişi
+- [x] **iyzico Ödeme Yapılandırma**: API Key, Secret Key, Ortam seçimi (Test/Canlı)
+- [x] **Bilgilendirme Linkleri**: BizimHesap ve iyzico sitelerine yönlendirme
+- [x] **Yapılandırma Durumu**: Ayarlar girildiğinde onay göstergesi
+
+### PDF İndirme Özelliği ✅
 - [x] **Fatura PDF**: Profesyonel fatura dökümanı oluşturma ve indirme
 - [x] **Teklif PDF**: Teklif dökümanı oluşturma ve indirme
 - [x] **Servis Raporu PDF**: Ticket için teknik servis raporu oluşturma
