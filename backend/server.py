@@ -5037,6 +5037,502 @@ async def remove_logo(logo_type: str = "main", current_user: User = Depends(get_
     
     return {"success": True, "message": "Logo kaldırıldı"}
 
+# ========== CARİ (LEDGER) ENDPOINTS ==========
+
+async def get_customer_balance(customer_id: str) -> float:
+    """Calculate customer's current balance"""
+    pipeline = [
+        {"$match": {"customer_id": customer_id}},
+        {"$group": {
+            "_id": "$customer_id",
+            "total_debit": {"$sum": "$debit"},
+            "total_credit": {"$sum": "$credit"}
+        }}
+    ]
+    result = await db.ledger_entries.aggregate(pipeline).to_list(1)
+    if result:
+        return result[0]["total_debit"] - result[0]["total_credit"]
+    return 0
+
+async def add_ledger_entry(
+    customer_id: str,
+    entry_type: str,
+    description: str,
+    debit: float,
+    credit: float,
+    reference_id: str = None,
+    reference_number: str = None,
+    created_by: str = None
+):
+    """Add a new ledger entry and update balance"""
+    balance = await get_customer_balance(customer_id)
+    new_balance = balance + debit - credit
+    
+    entry = {
+        "id": str(uuid.uuid4()),
+        "customer_id": customer_id,
+        "entry_type": entry_type,
+        "reference_id": reference_id,
+        "reference_number": reference_number,
+        "description": description,
+        "debit": debit,
+        "credit": credit,
+        "balance": new_balance,
+        "created_by": created_by,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.ledger_entries.insert_one(entry)
+    return entry
+
+@api_router.get("/ledger/customer/{customer_id}")
+async def get_customer_ledger(customer_id: str, current_user: User = Depends(get_current_user)):
+    """Get customer's ledger entries and balance"""
+    entries = await db.ledger_entries.find(
+        {"customer_id": customer_id}, {"_id": 0}
+    ).sort("created_at", -1).to_list(1000)
+    
+    balance = await get_customer_balance(customer_id)
+    
+    # Get customer info
+    customer = await db.customers.find_one({"id": customer_id}, {"_id": 0})
+    
+    return {
+        "customer": customer,
+        "entries": entries,
+        "balance": balance,
+        "total_debit": sum(e.get("debit", 0) for e in entries),
+        "total_credit": sum(e.get("credit", 0) for e in entries)
+    }
+
+@api_router.get("/ledger/summary")
+async def get_ledger_summary(current_user: User = Depends(get_current_user)):
+    """Get summary of all customer balances"""
+    pipeline = [
+        {"$group": {
+            "_id": "$customer_id",
+            "total_debit": {"$sum": "$debit"},
+            "total_credit": {"$sum": "$credit"}
+        }},
+        {"$project": {
+            "customer_id": "$_id",
+            "balance": {"$subtract": ["$total_debit", "$total_credit"]},
+            "_id": 0
+        }},
+        {"$sort": {"balance": -1}}
+    ]
+    
+    balances = await db.ledger_entries.aggregate(pipeline).to_list(1000)
+    
+    # Enrich with customer info
+    for b in balances:
+        customer = await db.customers.find_one({"id": b["customer_id"]}, {"_id": 0, "id": 1, "name": 1, "company": 1})
+        if customer:
+            b["customer_name"] = customer.get("name")
+            b["company"] = customer.get("company")
+    
+    total_receivable = sum(b["balance"] for b in balances if b["balance"] > 0)
+    total_payable = sum(abs(b["balance"]) for b in balances if b["balance"] < 0)
+    
+    return {
+        "customers": balances,
+        "total_receivable": total_receivable,
+        "total_payable": total_payable,
+        "net_balance": total_receivable - total_payable
+    }
+
+@api_router.post("/ledger/opening-balance")
+async def create_opening_balance(
+    customer_id: str,
+    amount: float,
+    current_user: User = Depends(get_current_user)
+):
+    """Create opening balance entry for customer"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekli")
+    
+    # Check if opening balance already exists
+    existing = await db.ledger_entries.find_one({
+        "customer_id": customer_id,
+        "entry_type": "opening"
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu müşteri için açılış bakiyesi zaten var")
+    
+    debit = amount if amount > 0 else 0
+    credit = abs(amount) if amount < 0 else 0
+    
+    entry = await add_ledger_entry(
+        customer_id=customer_id,
+        entry_type="opening",
+        description="Açılış Bakiyesi",
+        debit=debit,
+        credit=credit,
+        created_by=current_user.id
+    )
+    
+    return entry
+
+# ========== FATURA (INVOICE) ENDPOINTS ==========
+
+async def generate_invoice_number():
+    """Generate unique invoice number"""
+    today = datetime.now(timezone.utc)
+    prefix = f"FTR-{today.strftime('%Y%m')}"
+    
+    last_invoice = await db.invoices.find_one(
+        {"invoice_number": {"$regex": f"^{prefix}"}},
+        sort=[("invoice_number", -1)]
+    )
+    
+    if last_invoice:
+        last_num = int(last_invoice["invoice_number"].split("-")[-1])
+        return f"{prefix}-{str(last_num + 1).zfill(4)}"
+    return f"{prefix}-0001"
+
+def calculate_invoice_totals(items: List[Dict]) -> Dict:
+    """Calculate invoice totals from items"""
+    subtotal = 0
+    tax_total = 0
+    discount_total = 0
+    
+    for item in items:
+        qty = item.get("quantity", 1)
+        price = item.get("unit_price", 0)
+        tax_rate = item.get("tax_rate", 20)
+        discount = item.get("discount", 0)
+        
+        line_subtotal = qty * price
+        line_discount = line_subtotal * (discount / 100)
+        line_taxable = line_subtotal - line_discount
+        line_tax = line_taxable * (tax_rate / 100)
+        line_total = line_taxable + line_tax
+        
+        item["total"] = round(line_total, 2)
+        subtotal += line_subtotal
+        tax_total += line_tax
+        discount_total += line_discount
+    
+    return {
+        "subtotal": round(subtotal, 2),
+        "tax_total": round(tax_total, 2),
+        "discount_total": round(discount_total, 2),
+        "grand_total": round(subtotal - discount_total + tax_total, 2)
+    }
+
+@api_router.get("/invoices")
+async def get_invoices(
+    status: Optional[str] = None,
+    customer_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get all invoices with optional filters"""
+    query = {}
+    if status:
+        query["status"] = status
+    if customer_id:
+        query["customer_id"] = customer_id
+    
+    invoices = await db.invoices.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Enrich with customer info
+    for inv in invoices:
+        customer = await db.customers.find_one({"id": inv["customer_id"]}, {"_id": 0, "name": 1, "company": 1})
+        if customer:
+            inv["customer_name"] = customer.get("name")
+            inv["company"] = customer.get("company")
+    
+    return invoices
+
+@api_router.get("/invoices/{invoice_id}")
+async def get_invoice(invoice_id: str, current_user: User = Depends(get_current_user)):
+    """Get invoice details"""
+    invoice = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Fatura bulunamadı")
+    
+    # Get customer info
+    customer = await db.customers.find_one({"id": invoice["customer_id"]}, {"_id": 0})
+    invoice["customer"] = customer
+    
+    # Get related work order/ticket info
+    if invoice.get("work_order_id"):
+        work_order = await db.work_orders.find_one({"id": invoice["work_order_id"]}, {"_id": 0})
+        invoice["work_order"] = work_order
+    
+    if invoice.get("ticket_id"):
+        ticket = await db.tickets.find_one({"id": invoice["ticket_id"]}, {"_id": 0})
+        invoice["ticket"] = ticket
+    
+    # Get payments for this invoice
+    payments = await db.payments.find({"invoice_id": invoice_id}, {"_id": 0}).to_list(100)
+    invoice["payments"] = payments
+    
+    return invoice
+
+@api_router.post("/invoices")
+async def create_invoice(invoice_data: InvoiceCreate, current_user: User = Depends(get_current_user)):
+    """Create a new invoice"""
+    # Calculate totals
+    totals = calculate_invoice_totals(invoice_data.items)
+    
+    invoice_number = await generate_invoice_number()
+    
+    invoice = {
+        "id": str(uuid.uuid4()),
+        "invoice_number": invoice_number,
+        "customer_id": invoice_data.customer_id,
+        "work_order_id": invoice_data.work_order_id,
+        "ticket_id": invoice_data.ticket_id,
+        "status": "draft",
+        "items": invoice_data.items,
+        "subtotal": totals["subtotal"],
+        "tax_total": totals["tax_total"],
+        "discount_total": totals["discount_total"],
+        "grand_total": totals["grand_total"],
+        "paid_amount": 0,
+        "due_date": invoice_data.due_date,
+        "notes": invoice_data.notes,
+        "created_by": current_user.id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.invoices.insert_one(invoice)
+    
+    return {k: v for k, v in invoice.items() if k != "_id"}
+
+@api_router.patch("/invoices/{invoice_id}")
+async def update_invoice(invoice_id: str, update: InvoiceUpdate, current_user: User = Depends(get_current_user)):
+    """Update invoice"""
+    invoice = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Fatura bulunamadı")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    
+    # Recalculate totals if items changed
+    if "items" in update_data:
+        totals = calculate_invoice_totals(update_data["items"])
+        update_data.update(totals)
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.invoices.update_one({"id": invoice_id}, {"$set": update_data})
+    
+    return await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+
+@api_router.post("/invoices/{invoice_id}/finalize")
+async def finalize_invoice(invoice_id: str, current_user: User = Depends(get_current_user)):
+    """Finalize draft invoice and add to ledger"""
+    invoice = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Fatura bulunamadı")
+    
+    if invoice["status"] != "draft":
+        raise HTTPException(status_code=400, detail="Sadece taslak faturalar onaylanabilir")
+    
+    # Update invoice status
+    await db.invoices.update_one(
+        {"id": invoice_id},
+        {"$set": {"status": "pending", "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Add to ledger as debit (customer owes money)
+    await add_ledger_entry(
+        customer_id=invoice["customer_id"],
+        entry_type="invoice",
+        description=f"Fatura: {invoice['invoice_number']}",
+        debit=invoice["grand_total"],
+        credit=0,
+        reference_id=invoice_id,
+        reference_number=invoice["invoice_number"],
+        created_by=current_user.id
+    )
+    
+    return {"status": "success", "message": "Fatura onaylandı ve cariye işlendi"}
+
+@api_router.delete("/invoices/{invoice_id}")
+async def delete_invoice(invoice_id: str, current_user: User = Depends(get_current_user)):
+    """Delete draft invoice"""
+    invoice = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Fatura bulunamadı")
+    
+    if invoice["status"] != "draft":
+        raise HTTPException(status_code=400, detail="Sadece taslak faturalar silinebilir")
+    
+    await db.invoices.delete_one({"id": invoice_id})
+    
+    return {"status": "success", "message": "Fatura silindi"}
+
+# ========== ÖDEME (PAYMENT) ENDPOINTS ==========
+
+async def generate_payment_number():
+    """Generate unique payment number"""
+    today = datetime.now(timezone.utc)
+    prefix = f"TAH-{today.strftime('%Y%m')}"
+    
+    last_payment = await db.payments.find_one(
+        {"payment_number": {"$regex": f"^{prefix}"}},
+        sort=[("payment_number", -1)]
+    )
+    
+    if last_payment:
+        last_num = int(last_payment["payment_number"].split("-")[-1])
+        return f"{prefix}-{str(last_num + 1).zfill(4)}"
+    return f"{prefix}-0001"
+
+@api_router.get("/payments")
+async def get_payments(
+    customer_id: Optional[str] = None,
+    invoice_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get all payments with optional filters"""
+    query = {}
+    if customer_id:
+        query["customer_id"] = customer_id
+    if invoice_id:
+        query["invoice_id"] = invoice_id
+    
+    payments = await db.payments.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Enrich with customer info
+    for p in payments:
+        customer = await db.customers.find_one({"id": p["customer_id"]}, {"_id": 0, "name": 1, "company": 1})
+        if customer:
+            p["customer_name"] = customer.get("name")
+            p["company"] = customer.get("company")
+    
+    return payments
+
+@api_router.get("/payments/{payment_id}")
+async def get_payment(payment_id: str, current_user: User = Depends(get_current_user)):
+    """Get payment details"""
+    payment = await db.payments.find_one({"id": payment_id}, {"_id": 0})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Ödeme bulunamadı")
+    
+    # Get customer info
+    customer = await db.customers.find_one({"id": payment["customer_id"]}, {"_id": 0})
+    payment["customer"] = customer
+    
+    # Get invoice info if linked
+    if payment.get("invoice_id"):
+        invoice = await db.invoices.find_one({"id": payment["invoice_id"]}, {"_id": 0})
+        payment["invoice"] = invoice
+    
+    return payment
+
+@api_router.post("/payments")
+async def create_payment(payment_data: PaymentCreate, current_user: User = Depends(get_current_user)):
+    """Create a new payment (tahsilat)"""
+    payment_number = await generate_payment_number()
+    
+    payment = {
+        "id": str(uuid.uuid4()),
+        "payment_number": payment_number,
+        "customer_id": payment_data.customer_id,
+        "invoice_id": payment_data.invoice_id,
+        "amount": payment_data.amount,
+        "payment_method": payment_data.payment_method,
+        "status": "completed",
+        "notes": payment_data.notes,
+        "created_by": current_user.id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.payments.insert_one(payment)
+    
+    # Add to ledger as credit (payment received)
+    await add_ledger_entry(
+        customer_id=payment_data.customer_id,
+        entry_type="payment",
+        description=f"Tahsilat: {payment_number}",
+        debit=0,
+        credit=payment_data.amount,
+        reference_id=payment["id"],
+        reference_number=payment_number,
+        created_by=current_user.id
+    )
+    
+    # Update invoice if linked
+    if payment_data.invoice_id:
+        invoice = await db.invoices.find_one({"id": payment_data.invoice_id}, {"_id": 0})
+        if invoice:
+            new_paid = invoice.get("paid_amount", 0) + payment_data.amount
+            new_status = "paid" if new_paid >= invoice["grand_total"] else "partial"
+            
+            await db.invoices.update_one(
+                {"id": payment_data.invoice_id},
+                {"$set": {
+                    "paid_amount": new_paid,
+                    "status": new_status,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+    
+    return {k: v for k, v in payment.items() if k != "_id"}
+
+@api_router.post("/payments/iyzico/create")
+async def create_iyzico_payment(
+    invoice_id: str,
+    card_holder_name: str,
+    card_number: str,
+    expire_month: str,
+    expire_year: str,
+    cvc: str,
+    installment: int = 1,
+    current_user: User = Depends(get_current_user)
+):
+    """Create payment via iyzico gateway"""
+    # Get invoice
+    invoice = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Fatura bulunamadı")
+    
+    # Get customer
+    customer = await db.customers.find_one({"id": invoice["customer_id"]}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Müşteri bulunamadı")
+    
+    # For now, return a mock response - actual iyzico integration requires API keys
+    # This structure is ready for iyzico integration when keys are provided
+    return {
+        "status": "pending",
+        "message": "iyzico entegrasyonu için API anahtarları gerekli. Lütfen sistem ayarlarından iyzico API anahtarlarını ekleyin.",
+        "integration_ready": True,
+        "required_keys": ["IYZICO_API_KEY", "IYZICO_SECRET_KEY"]
+    }
+
+@api_router.get("/invoices/stats/summary")
+async def get_invoice_stats(current_user: User = Depends(get_current_user)):
+    """Get invoice statistics"""
+    pipeline = [
+        {"$group": {
+            "_id": "$status",
+            "count": {"$sum": 1},
+            "total": {"$sum": "$grand_total"}
+        }}
+    ]
+    
+    stats_by_status = await db.invoices.aggregate(pipeline).to_list(10)
+    
+    # Calculate totals
+    total_invoiced = sum(s["total"] for s in stats_by_status)
+    total_paid = sum(s["total"] for s in stats_by_status if s["_id"] == "paid")
+    total_pending = sum(s["total"] for s in stats_by_status if s["_id"] in ["pending", "partial"])
+    total_overdue = sum(s["total"] for s in stats_by_status if s["_id"] == "overdue")
+    
+    return {
+        "by_status": {s["_id"]: {"count": s["count"], "total": s["total"]} for s in stats_by_status},
+        "total_invoiced": total_invoiced,
+        "total_paid": total_paid,
+        "total_pending": total_pending,
+        "total_overdue": total_overdue,
+        "collection_rate": round((total_paid / total_invoiced * 100) if total_invoiced > 0 else 0, 2)
+    }
+
 app.include_router(api_router)
 
 app.add_middleware(
