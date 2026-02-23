@@ -93,6 +93,8 @@ function App() {
             <Route path="whatsapp" element={<WhatsAppSettings />} />
             <Route path="portal-users" element={<PortalUserList />} />
             <Route path="settings" element={<SystemSettings />} />
+            <Route path="service-report/:ticketId" element={<ServiceReportPrint />} />
+            <Route path="quotes/new" element={<QuoteCreate />} />
           </Route>
         </Routes>
       </BrowserRouter>
