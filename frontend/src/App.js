@@ -26,6 +26,9 @@ import SystemSettings from "@/pages/SystemSettings";
 import ServiceReportPrint from "@/pages/ServiceReportPrint";
 import QuoteCreate from "@/pages/QuoteCreate";
 import QuoteList from "@/pages/QuoteList";
+import LedgerList from "@/pages/LedgerList";
+import InvoiceList from "@/pages/InvoiceList";
+import InvoiceDetail from "@/pages/InvoiceDetail";
 // Customer Portal
 import CustomerPortalLogin from "@/pages/CustomerPortalLogin";
 import CustomerPortalLayout from "@/components/CustomerPortalLayout";
