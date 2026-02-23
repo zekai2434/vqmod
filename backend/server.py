@@ -2431,6 +2431,156 @@ async def get_expiring_contracts(days: int = 30, current_user: User = Depends(ge
     expiring.sort(key=lambda x: x['days_remaining'])
     return expiring
 
+# ========== QUOTE ENDPOINTS ==========
+@api_router.post("/quotes", response_model=Quote)
+async def create_quote(quote: QuoteCreate, current_user: User = Depends(get_current_user)):
+    """Create a new quote"""
+    quote_count = await db.quotes.count_documents({})
+    quote_number = f"TKL-{quote_count + 1:06d}"
+    
+    # Calculate totals
+    subtotal = sum(item.get('subtotal', 0) for item in quote.items)
+    total_vat = sum(item.get('vat_amount', 0) for item in quote.items)
+    grand_total = subtotal + total_vat
+    
+    # Calculate valid until date
+    valid_until = (datetime.now(timezone.utc) + timedelta(days=quote.validity_days)).isoformat()
+    
+    quote_obj = Quote(
+        quote_number=quote_number,
+        customer_id=quote.customer_id,
+        subject=quote.subject,
+        validity_days=quote.validity_days,
+        valid_until=valid_until,
+        payment_terms=quote.payment_terms,
+        payment_notes=quote.payment_notes,
+        notes=quote.notes,
+        items=quote.items,
+        subtotal=subtotal,
+        total_vat=total_vat,
+        grand_total=grand_total,
+        currency=quote.currency,
+        status="draft",
+        created_by=current_user.id
+    )
+    
+    doc = quote_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    doc['updated_at'] = doc['updated_at'].isoformat()
+    await db.quotes.insert_one(doc)
+    
+    return quote_obj
+
+@api_router.get("/quotes")
+async def get_quotes(customer_id: Optional[str] = None, status: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    """Get all quotes"""
+    query = {}
+    if customer_id:
+        query["customer_id"] = customer_id
+    if status:
+        query["status"] = status
+    
+    quotes = await db.quotes.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Check for expired quotes and update status
+    now = datetime.now(timezone.utc)
+    for q in quotes:
+        if q.get('status') in ['draft', 'sent'] and q.get('valid_until'):
+            try:
+                valid_until = datetime.fromisoformat(q['valid_until'].replace('Z', '+00:00'))
+                if valid_until < now:
+                    await db.quotes.update_one({"id": q['id']}, {"$set": {"status": "expired"}})
+                    q['status'] = 'expired'
+            except:
+                pass
+    
+    return quotes
+
+@api_router.get("/quotes/{quote_id}")
+async def get_quote(quote_id: str, current_user: User = Depends(get_current_user)):
+    """Get a single quote"""
+    quote = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+    if not quote:
+        raise HTTPException(status_code=404, detail="Teklif bulunamadı")
+    return quote
+
+@api_router.patch("/quotes/{quote_id}")
+async def update_quote(quote_id: str, update: QuoteUpdate, current_user: User = Depends(get_current_user)):
+    """Update a quote"""
+    quote = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+    if not quote:
+        raise HTTPException(status_code=404, detail="Teklif bulunamadı")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    
+    # Recalculate totals if items changed
+    if 'items' in update_data:
+        items = update_data['items']
+        update_data['subtotal'] = sum(item.get('subtotal', 0) for item in items)
+        update_data['total_vat'] = sum(item.get('vat_amount', 0) for item in items)
+        update_data['grand_total'] = update_data['subtotal'] + update_data['total_vat']
+    
+    # Update valid_until if validity_days changed
+    if 'validity_days' in update_data:
+        update_data['valid_until'] = (datetime.now(timezone.utc) + timedelta(days=update_data['validity_days'])).isoformat()
+    
+    # Handle status changes
+    if update_data.get('status') == 'sent' and quote.get('status') != 'sent':
+        update_data['sent_at'] = datetime.now(timezone.utc).isoformat()
+    elif update_data.get('status') == 'accepted':
+        update_data['accepted_at'] = datetime.now(timezone.utc).isoformat()
+    elif update_data.get('status') == 'rejected':
+        update_data['rejected_at'] = datetime.now(timezone.utc).isoformat()
+    
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.quotes.update_one({"id": quote_id}, {"$set": update_data})
+    
+    updated = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/quotes/{quote_id}")
+async def delete_quote(quote_id: str, current_user: User = Depends(get_current_user)):
+    """Delete a quote"""
+    result = await db.quotes.delete_one({"id": quote_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Teklif bulunamadı")
+    return {"message": "Teklif silindi"}
+
+@api_router.post("/quotes/{quote_id}/duplicate")
+async def duplicate_quote(quote_id: str, current_user: User = Depends(get_current_user)):
+    """Duplicate an existing quote"""
+    quote = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+    if not quote:
+        raise HTTPException(status_code=404, detail="Teklif bulunamadı")
+    
+    quote_count = await db.quotes.count_documents({})
+    new_quote_number = f"TKL-{quote_count + 1:06d}"
+    
+    new_quote = {
+        "id": str(uuid.uuid4()),
+        "quote_number": new_quote_number,
+        "customer_id": quote['customer_id'],
+        "subject": quote.get('subject'),
+        "validity_days": quote.get('validity_days', 30),
+        "valid_until": (datetime.now(timezone.utc) + timedelta(days=quote.get('validity_days', 30))).isoformat(),
+        "payment_terms": quote.get('payment_terms'),
+        "payment_notes": quote.get('payment_notes'),
+        "notes": quote.get('notes'),
+        "items": quote.get('items', []),
+        "subtotal": quote.get('subtotal', 0),
+        "total_vat": quote.get('total_vat', 0),
+        "grand_total": quote.get('grand_total', 0),
+        "currency": quote.get('currency', 'TRY'),
+        "status": "draft",
+        "created_by": current_user.id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.quotes.insert_one(new_quote)
+    return new_quote
+
 @api_router.get("/reports/dashboard")
 async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
     total_tickets = await db.tickets.count_documents({})
