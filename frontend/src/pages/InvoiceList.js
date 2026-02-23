@@ -557,13 +557,6 @@ export default function InvoiceList() {
                   </Button>
                 </div>
               </div>
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name} {c.company && `- ${c.company}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="space-y-2">
                 <Label>Vade Tarihi</Label>
                 <Input
