@@ -24,6 +24,16 @@ const initialCustomerForm = {
   tax_office: ""
 };
 
+const initialAssetForm = {
+  serial_number: "",
+  device_type: "",
+  brand: "",
+  model: "",
+  location: "",
+  purchase_date: "",
+  warranty_end: ""
+};
+
 export default function NewTicket() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
