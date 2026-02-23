@@ -6285,12 +6285,7 @@ async def download_invoice_pdf(invoice_id: str, current_user: User = Depends(get
 
 @api_router.get("/quotes/{quote_id}/pdf")
 async def download_quote_pdf(quote_id: str, current_user: User = Depends(get_current_user)):
-    """Download quote as PDF"""
-    try:
-        from weasyprint import HTML
-    except ImportError:
-        raise HTTPException(status_code=500, detail="PDF oluşturma modülü yüklenemedi")
-    
+    """Download quote as PDF using fpdf2"""
     quote = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
     if not quote:
         raise HTTPException(status_code=404, detail="Teklif bulunamadı")
@@ -6303,10 +6298,9 @@ async def download_quote_pdf(quote_id: str, current_user: User = Depends(get_cur
     if not settings:
         settings = {}
     
-    html_content = generate_quote_pdf_html(quote, customer, settings)
+    pdf_bytes = generate_quote_pdf(quote, customer, settings)
     
-    pdf_buffer = io.BytesIO()
-    HTML(string=html_content).write_pdf(pdf_buffer)
+    pdf_buffer = io.BytesIO(pdf_bytes)
     pdf_buffer.seek(0)
     
     filename = f"Teklif_{quote.get('quote_number', quote_id)}.pdf"
