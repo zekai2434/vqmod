@@ -95,7 +95,9 @@ function App() {
             <Route path="portal-users" element={<PortalUserList />} />
             <Route path="settings" element={<SystemSettings />} />
             <Route path="service-report/:ticketId" element={<ServiceReportPrint />} />
+            <Route path="quotes" element={<QuoteList />} />
             <Route path="quotes/new" element={<QuoteCreate />} />
+            <Route path="quotes/:quoteId" element={<QuoteCreate />} />
           </Route>
         </Routes>
       </BrowserRouter>
