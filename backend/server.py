@@ -962,6 +962,67 @@ class WhatsAppMessage(BaseModel):
     reference_id: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+# ========== CONTRACT MODELS ==========
+class Contract(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    contract_number: str
+    customer_id: str
+    name: str
+    contract_type: str  # standard, premium, enterprise
+    start_date: str
+    end_date: str
+    auto_renew: bool = False
+    monthly_fee: float = 0.0
+    currency: str = "TRY"
+    sla_profile_id: Optional[str] = None
+    max_tickets_per_month: Optional[int] = None
+    max_response_hours: Optional[int] = None
+    includes_remote_support: bool = True
+    includes_onsite_support: bool = False
+    includes_parts: bool = False
+    terms: Optional[str] = None
+    notes: Optional[str] = None
+    status: str = "active"  # active, expired, cancelled, pending
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ContractCreate(BaseModel):
+    customer_id: str
+    name: str
+    contract_type: str = "standard"
+    start_date: str
+    end_date: str
+    auto_renew: bool = False
+    monthly_fee: float = 0.0
+    currency: str = "TRY"
+    sla_profile_id: Optional[str] = None
+    max_tickets_per_month: Optional[int] = None
+    max_response_hours: Optional[int] = None
+    includes_remote_support: bool = True
+    includes_onsite_support: bool = False
+    includes_parts: bool = False
+    terms: Optional[str] = None
+    notes: Optional[str] = None
+
+class ContractUpdate(BaseModel):
+    name: Optional[str] = None
+    contract_type: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    auto_renew: Optional[bool] = None
+    monthly_fee: Optional[float] = None
+    currency: Optional[str] = None
+    sla_profile_id: Optional[str] = None
+    max_tickets_per_month: Optional[int] = None
+    max_response_hours: Optional[int] = None
+    includes_remote_support: Optional[bool] = None
+    includes_onsite_support: Optional[bool] = None
+    includes_parts: Optional[bool] = None
+    terms: Optional[str] = None
+    notes: Optional[str] = None
+    status: Optional[str] = None
+
 # Email Templates
 EMAIL_TEMPLATES = {
     "ticket_created": {
