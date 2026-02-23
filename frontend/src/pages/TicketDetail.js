@@ -120,6 +120,58 @@ export default function TicketDetail() {
     }
   };
 
+  const openEditDialog = () => {
+    if (!ticket) return;
+    setEditFormData({
+      title: ticket.title || "",
+      description: ticket.description || "",
+      category: ticket.category || "",
+      subcategory: ticket.subcategory || "",
+      priority: ticket.priority || "",
+      asset_id: ticket.asset_id || "",
+      assigned_to: ticket.assigned_to || ""
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditTicket = async () => {
+    setSavingEdit(true);
+    try {
+      const token = localStorage.getItem('token');
+      const updateData = {};
+      
+      // Only include changed fields
+      if (editFormData.title !== ticket.title) updateData.title = editFormData.title;
+      if (editFormData.description !== ticket.description) updateData.description = editFormData.description;
+      if (editFormData.category !== ticket.category) updateData.category = editFormData.category;
+      if (editFormData.subcategory !== ticket.subcategory) updateData.subcategory = editFormData.subcategory;
+      if (editFormData.priority !== ticket.priority) updateData.priority = editFormData.priority;
+      if (editFormData.assigned_to !== ticket.assigned_to) updateData.assigned_to = editFormData.assigned_to;
+      
+      // Handle asset_id - "" means remove asset
+      if (editFormData.asset_id !== (ticket.asset_id || "")) {
+        updateData.asset_id = editFormData.asset_id || null;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        toast.info("Değişiklik yapılmadı");
+        setEditDialogOpen(false);
+        return;
+      }
+
+      await axios.patch(`${API}/tickets/${id}`, updateData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Ticket başarıyla güncellendi");
+      setEditDialogOpen(false);
+      fetchTicketDetails();
+    } catch (error) {
+      toast.error("Ticket güncellenirken hata oluştu");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
 
