@@ -1635,6 +1635,7 @@ async def update_ticket(ticket_id: str, update: TicketUpdate, current_user: User
     
     old_status = ticket.get('status')
     old_assigned = ticket.get('assigned_to')
+    old_asset_id = ticket.get('asset_id')
     
     update_data = {k: v for k, v in update.model_dump().items() if v is not None}
     update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
@@ -1664,6 +1665,29 @@ async def update_ticket(ticket_id: str, update: TicketUpdate, current_user: User
             "new_assignee": update.assigned_to,
             "changed_by": current_user.id,
             "changed_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    # Record asset change in ticket history
+    if update.asset_id is not None and update.asset_id != old_asset_id:
+        old_asset_name = "Yok"
+        new_asset_name = "Yok"
+        if old_asset_id:
+            old_asset = await db.assets.find_one({"id": old_asset_id}, {"_id": 0})
+            if old_asset:
+                old_asset_name = f"{old_asset.get('brand', '')} {old_asset.get('model', '')} ({old_asset.get('serial_number', '')})"
+        if update.asset_id:
+            new_asset = await db.assets.find_one({"id": update.asset_id}, {"_id": 0})
+            if new_asset:
+                new_asset_name = f"{new_asset.get('brand', '')} {new_asset.get('model', '')} ({new_asset.get('serial_number', '')})"
+        
+        await db.ticket_history.insert_one({
+            "id": str(uuid.uuid4()),
+            "ticket_id": ticket_id,
+            "event_type": "asset_change",
+            "content": f"Cihaz değiştirildi: {old_asset_name} → {new_asset_name}",
+            "user_id": current_user.id,
+            "user_name": current_user.full_name,
+            "created_at": datetime.now(timezone.utc).isoformat()
         })
     
     updated_ticket = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
