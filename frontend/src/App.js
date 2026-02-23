@@ -79,6 +79,7 @@ function App() {
             <Route path="assets" element={<AssetList />} />
             <Route path="parts" element={<PartList />} />
             <Route path="rma" element={<RMAList />} />
+            <Route path="contracts" element={<ContractList />} />
             <Route path="work-orders" element={<WorkOrderList />} />
             <Route path="work-orders/:id" element={<WorkOrderDetail />} />
             <Route path="users" element={<UserList />} />
