@@ -2586,6 +2586,165 @@ async def get_technician_performance(start_date: Optional[str] = None, end_date:
     
     return result
 
+@api_router.get("/reports/technician-performance/{technician_id}")
+async def get_technician_performance_detail(technician_id: str, start_date: Optional[str] = None, end_date: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    """Get detailed performance metrics for a specific technician"""
+    user = await db.users.find_one({"id": technician_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Technician not found")
+    
+    query = {"assigned_technician": technician_id}
+    ticket_query = {"assigned_to": technician_id}
+    
+    if start_date:
+        query["created_at"] = {"$gte": start_date}
+        ticket_query["created_at"] = {"$gte": start_date}
+    if end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = end_date
+            ticket_query["created_at"]["$lte"] = end_date
+        else:
+            query["created_at"] = {"$lte": end_date}
+            ticket_query["created_at"] = {"$lte": end_date}
+    
+    work_orders = await db.work_orders.find(query, {"_id": 0}).to_list(10000)
+    tickets = await db.tickets.find(ticket_query, {"_id": 0}).to_list(10000)
+    
+    total_work_orders = len(work_orders)
+    completed_work_orders = len([wo for wo in work_orders if wo.get('status') == 'completed'])
+    in_progress_work_orders = len([wo for wo in work_orders if wo.get('status') == 'in_progress'])
+    
+    total_time_spent = sum(wo.get('time_spent_minutes', 0) for wo in work_orders)
+    avg_time_per_wo = round(total_time_spent / completed_work_orders, 2) if completed_work_orders > 0 else 0
+    
+    # Work type breakdown
+    work_type_counts = {"onsite": 0, "remote": 0, "workshop": 0}
+    for wo in work_orders:
+        wt = wo.get('work_type', 'onsite')
+        if wt in work_type_counts:
+            work_type_counts[wt] += 1
+    
+    # Monthly trend
+    monthly_trend = {}
+    for wo in work_orders:
+        if wo.get('created_at'):
+            month = wo['created_at'][:7] if isinstance(wo['created_at'], str) else wo['created_at'].strftime("%Y-%m")
+            monthly_trend[month] = monthly_trend.get(month, 0) + 1
+    
+    # Checklist completion rate
+    total_checklist_items = 0
+    completed_checklist_items = 0
+    for wo in work_orders:
+        checklist = wo.get('checklist', [])
+        total_checklist_items += len(checklist)
+        completed_checklist_items += len([item for item in checklist if item.get('completed')])
+    
+    checklist_completion_rate = round((completed_checklist_items / total_checklist_items * 100), 1) if total_checklist_items > 0 else 0
+    
+    # Customer satisfaction (based on completed without issues)
+    satisfaction_score = round((completed_work_orders / total_work_orders * 100), 1) if total_work_orders > 0 else 0
+    
+    # Recent work orders
+    recent_work_orders = sorted(work_orders, key=lambda x: x.get('created_at', ''), reverse=True)[:10]
+    
+    return {
+        "technician_id": technician_id,
+        "technician_name": user['full_name'],
+        "summary": {
+            "total_work_orders": total_work_orders,
+            "completed_work_orders": completed_work_orders,
+            "in_progress_work_orders": in_progress_work_orders,
+            "assigned_tickets": len(tickets),
+            "total_time_spent_minutes": total_time_spent,
+            "avg_time_per_work_order": avg_time_per_wo,
+            "checklist_completion_rate": checklist_completion_rate,
+            "completion_rate": satisfaction_score
+        },
+        "work_type_breakdown": work_type_counts,
+        "monthly_trend": [{"month": k, "count": v} for k, v in sorted(monthly_trend.items())],
+        "recent_work_orders": recent_work_orders
+    }
+
+@api_router.get("/reports/service-report/{ticket_id}")
+async def get_service_report(ticket_id: str, current_user: User = Depends(get_current_user)):
+    """Generate a printable service report for a ticket"""
+    ticket = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    customer = await db.customers.find_one({"id": ticket['customer_id']}, {"_id": 0})
+    asset = None
+    if ticket.get('asset_id'):
+        asset = await db.assets.find_one({"id": ticket['asset_id']}, {"_id": 0})
+    
+    work_orders = await db.work_orders.find({"ticket_id": ticket_id}, {"_id": 0}).to_list(100)
+    comments = await db.ticket_comments.find({"ticket_id": ticket_id, "is_internal": False}, {"_id": 0}).to_list(1000)
+    attachments = await db.attachments.find({"related_to": "ticket", "related_id": ticket_id}, {"_id": 0, "file_data": 0}).to_list(100)
+    
+    users = await db.users.find({}, {"_id": 0, "id": 1, "full_name": 1}).to_list(1000)
+    user_map = {u['id']: u['full_name'] for u in users}
+    
+    # Parts used across all work orders
+    parts_used = []
+    for wo in work_orders:
+        for part in wo.get('parts_used', []):
+            parts_used.append(part)
+    
+    total_time_spent = sum(wo.get('time_spent_minutes', 0) for wo in work_orders)
+    
+    return {
+        "ticket": {
+            "ticket_number": ticket['ticket_number'],
+            "title": ticket['title'],
+            "description": ticket['description'],
+            "category": ticket.get('category'),
+            "priority": ticket.get('priority'),
+            "status": ticket.get('status'),
+            "created_at": ticket.get('created_at'),
+            "resolved_at": ticket.get('resolved_at'),
+            "created_by": user_map.get(ticket.get('created_by'))
+        },
+        "customer": {
+            "name": customer.get('name') if customer else None,
+            "company": customer.get('company') if customer else None,
+            "email": customer.get('email') if customer else None,
+            "phone": customer.get('phone') if customer else None,
+            "address": customer.get('address') if customer else None
+        },
+        "asset": {
+            "device_type": asset.get('device_type') if asset else None,
+            "brand": asset.get('brand') if asset else None,
+            "model": asset.get('model') if asset else None,
+            "serial_number": asset.get('serial_number') if asset else None,
+            "hostname": asset.get('hostname') if asset else None,
+            "ip_address": asset.get('ip_address') if asset else None
+        } if asset else None,
+        "work_orders": [{
+            "work_type": wo.get('work_type'),
+            "status": wo.get('status'),
+            "scheduled_date": wo.get('scheduled_date'),
+            "technician": user_map.get(wo.get('assigned_technician')),
+            "service_report": wo.get('service_report'),
+            "time_spent_minutes": wo.get('time_spent_minutes', 0),
+            "checklist": wo.get('checklist', []),
+            "completed_at": wo.get('completed_at')
+        } for wo in work_orders],
+        "comments": [{
+            "user_name": c.get('user_name'),
+            "comment": c.get('comment'),
+            "created_at": c.get('created_at')
+        } for c in comments],
+        "attachments": [{
+            "filename": a.get('filename'),
+            "file_type": a.get('file_type')
+        } for a in attachments],
+        "summary": {
+            "total_work_orders": len(work_orders),
+            "total_time_spent_minutes": total_time_spent,
+            "parts_used_count": len(parts_used)
+        }
+    }
+
 @api_router.get("/reports/ticket-aging")
 async def get_ticket_aging(current_user: User = Depends(get_current_user)):
     open_tickets = await db.tickets.find({"status": {"$nin": ["resolved", "closed"]}}, {"_id": 0}).to_list(10000)
