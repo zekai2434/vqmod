@@ -187,10 +187,16 @@ class AssetCreate(BaseModel):
     notes: Optional[str] = None
 
 class AssetUpdate(BaseModel):
+    customer_id: Optional[str] = None
+    serial_number: Optional[str] = None
+    device_type: Optional[str] = None
+    brand: Optional[str] = None
+    model: Optional[str] = None
     location_id: Optional[str] = None
     hostname: Optional[str] = None
     ip_address: Optional[str] = None
     location: Optional[str] = None
+    purchase_date: Optional[str] = None
     warranty_end: Optional[str] = None
     support_end: Optional[str] = None
     support_contract_id: Optional[str] = None
@@ -284,6 +290,14 @@ class TicketUpdate(BaseModel):
     on_hold_reason: Optional[str] = None
     is_out_of_scope: Optional[bool] = None
     out_of_scope_reason: Optional[str] = None
+    # Extended fields for full ticket editing
+    title: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    subcategory: Optional[str] = None
+    asset_id: Optional[str] = None
+    customer_id: Optional[str] = None
+    channel: Optional[str] = None
 
 class WorkOrderChecklistItem(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
