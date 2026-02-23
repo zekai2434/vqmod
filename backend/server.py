@@ -1514,6 +1514,28 @@ async def update_ticket(ticket_id: str, update: TicketUpdate, current_user: User
     
     await db.tickets.update_one({"id": ticket_id}, {"$set": update_data})
     
+    # Record status change history
+    if update.status and update.status != old_status:
+        await db.ticket_status_history.insert_one({
+            "id": str(uuid.uuid4()),
+            "ticket_id": ticket_id,
+            "old_status": old_status,
+            "new_status": update.status,
+            "changed_by": current_user.id,
+            "changed_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    # Record assignment change history
+    if update.assigned_to and update.assigned_to != old_assigned:
+        await db.ticket_assignment_history.insert_one({
+            "id": str(uuid.uuid4()),
+            "ticket_id": ticket_id,
+            "old_assignee": old_assigned,
+            "new_assignee": update.assigned_to,
+            "changed_by": current_user.id,
+            "changed_at": datetime.now(timezone.utc).isoformat()
+        })
+    
     updated_ticket = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
     if isinstance(updated_ticket.get('created_at'), str):
         updated_ticket['created_at'] = datetime.fromisoformat(updated_ticket['created_at'])
