@@ -6229,12 +6229,7 @@ def generate_service_report_pdf_html(ticket: dict, customer: dict, asset: dict, 
 
 @api_router.get("/tickets/{ticket_id}/service-report/pdf")
 async def download_service_report_pdf(ticket_id: str, current_user: User = Depends(get_current_user)):
-    """Download service report as PDF"""
-    try:
-        from weasyprint import HTML
-    except ImportError:
-        raise HTTPException(status_code=500, detail="PDF generation library not available")
-    
+    """Download service report as PDF using fpdf2"""
     ticket = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket bulunamadı")
@@ -6246,10 +6241,9 @@ async def download_service_report_pdf(ticket_id: str, current_user: User = Depen
     
     settings = await db.settings.find_one({"type": "system"}, {"_id": 0})
     
-    html_content = generate_service_report_pdf_html(ticket, customer, asset, settings)
+    pdf_bytes = generate_service_report_pdf(ticket, customer, asset, settings)
     
-    pdf_buffer = io.BytesIO()
-    HTML(string=html_content).write_pdf(pdf_buffer)
+    pdf_buffer = io.BytesIO(pdf_bytes)
     pdf_buffer.seek(0)
     
     filename = f"Servis_Raporu_{ticket.get('ticket_number', ticket_id)}.pdf"
