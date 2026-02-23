@@ -129,6 +129,39 @@ export default function NewTicket() {
     }
   };
 
+  const handleAddAsset = async () => {
+    if (!assetForm.serial_number || !assetForm.device_type || !assetForm.brand || !assetForm.model) {
+      toast.error("Seri no, cihaz tipi, marka ve model zorunludur");
+      return;
+    }
+
+    setSavingAsset(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API}/assets`, {
+        ...assetForm,
+        customer_id: formData.customer_id
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const newAsset = response.data;
+      
+      // Add to assets list and select it
+      setAssets(prev => [...prev, newAsset]);
+      setFormData(prev => ({ ...prev, asset_id: newAsset.id }));
+      
+      toast.success("Cihaz başarıyla eklendi ve seçildi");
+      setAssetDialogOpen(false);
+      setAssetForm(initialAssetForm);
+    } catch (error) {
+      const msg = error.response?.data?.detail || "Cihaz eklenirken hata oluştu";
+      toast.error(msg);
+    } finally {
+      setSavingAsset(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
