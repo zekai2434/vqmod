@@ -5935,47 +5935,8 @@ def generate_service_report_pdf(ticket: dict, customer: dict, asset: dict, setti
     pdf.cell(95, 6, "Müşteri İmzası", align='C', ln=True)
     
     return pdf.output()
-            <h3 style="color: #64748b; font-size: 11px; margin-bottom: 5px;">FATURA EDİLEN</h3>
-            <p style="margin: 3px 0; font-weight: bold;">{customer.get("name", "")}</p>
-            <p style="margin: 3px 0;">{customer.get("company", "")}</p>
-            <p style="margin: 3px 0;">{customer.get("address", "")}</p>
-            {f'<p style="margin: 3px 0;">VKN: {customer.get("tax_number", "")} - {customer.get("tax_office", "")}</p>' if customer.get("tax_number") else ""}
-        </div>
-        
-        <table>
-            <thead>
-                <tr>
-                    <th>Açıklama</th>
-                    <th style="text-align: center; width: 60px;">Miktar</th>
-                    <th style="text-align: right; width: 100px;">Birim Fiyat</th>
-                    <th style="text-align: center; width: 60px;">KDV</th>
-                    <th style="text-align: right; width: 100px;">Toplam</th>
-                </tr>
-            </thead>
-            <tbody>
-                {items_html}
-            </tbody>
-        </table>
-        
-        <div class="totals">
-            <table>
-                <tr><td style="padding: 5px;">Ara Toplam:</td><td style="padding: 5px; text-align: right;">₺{invoice.get("subtotal", 0):,.2f}</td></tr>
-                <tr><td style="padding: 5px;">KDV:</td><td style="padding: 5px; text-align: right;">₺{invoice.get("tax_total", 0):,.2f}</td></tr>
-                {f'<tr><td style="padding: 5px;">İskonto:</td><td style="padding: 5px; text-align: right; color: #dc2626;">-₺{invoice.get("discount_total", 0):,.2f}</td></tr>' if invoice.get("discount_total", 0) > 0 else ""}
-                <tr class="grand-total"><td style="padding: 10px;">GENEL TOPLAM:</td><td style="padding: 10px; text-align: right;">₺{invoice.get("grand_total", 0):,.2f}</td></tr>
-            </table>
-        </div>
-        
-        {f'<div style="margin-top: 30px; padding: 15px; background: #f8fafc; border-radius: 5px;"><strong>Notlar:</strong><br/>{invoice.get("notes", "")}</div>' if invoice.get("notes") else ""}
-        
-        <div style="margin-top: 40px; text-align: center; color: #94a3b8; font-size: 10px;">
-            <p>Bu fatura elektronik ortamda oluşturulmuştur.</p>
-        </div>
-    </body>
-    </html>
-    """
 
-def generate_quote_pdf_html(quote: dict, customer: dict, settings: dict) -> str:
+@api_router.get("/tickets/{ticket_id}/service-report/pdf")
     """Generate HTML for quote PDF"""
     items_html = ""
     for item in quote.get("items", []):
