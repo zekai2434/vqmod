@@ -96,7 +96,7 @@ export default function InvoiceDetail() {
     
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${API}/invoices/${id}/send-to-bizim-hesap`, {}, {
+      await axios.post(`${API}/invoices/${id}/send-efatura`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success("E-Fatura BizimHesap'a başarıyla gönderildi!");
