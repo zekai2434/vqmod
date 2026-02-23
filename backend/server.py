@@ -5802,6 +5802,208 @@ def generate_quote_pdf_html(quote: dict, customer: dict, settings: dict) -> str:
     </html>
     """
 
+def generate_service_report_pdf_html(ticket: dict, customer: dict, asset: dict, settings: dict) -> str:
+    """Generate HTML content for service report PDF"""
+    company_name = settings.get("company_name", "Teknik Servis") if settings else "Teknik Servis"
+    company_address = settings.get("company_address", "") if settings else ""
+    company_phone = settings.get("company_phone", "") if settings else ""
+    
+    status_labels = {
+        "open": "Açık",
+        "in_progress": "İşlemde",
+        "pending": "Beklemede",
+        "resolved": "Çözüldü",
+        "closed": "Kapalı"
+    }
+    
+    priority_labels = {
+        "low": "Düşük",
+        "medium": "Orta",
+        "high": "Yüksek",
+        "critical": "Kritik"
+    }
+    
+    # Format dates
+    created_date = ticket.get("created_at", "")[:10] if ticket.get("created_at") else ""
+    
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            @page {{ size: A4; margin: 20mm; }}
+            body {{ font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; line-height: 1.4; color: #333; }}
+            .header {{ display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; border-bottom: 2px solid #2563eb; padding-bottom: 15px; }}
+            .company-info {{ text-align: left; }}
+            .company-name {{ font-size: 22px; font-weight: bold; color: #1e3a8a; }}
+            .company-details {{ font-size: 10px; color: #64748b; margin-top: 5px; }}
+            .report-title {{ text-align: right; }}
+            .report-title h1 {{ font-size: 24px; color: #1e3a8a; margin: 0; }}
+            .ticket-number {{ font-size: 14px; color: #64748b; font-family: monospace; }}
+            .section {{ margin-bottom: 20px; }}
+            .section-title {{ font-size: 12px; font-weight: bold; color: #1e3a8a; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; margin-bottom: 10px; }}
+            .info-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }}
+            .info-box {{ background: #f8fafc; padding: 12px; border-radius: 5px; }}
+            .info-label {{ font-size: 9px; color: #64748b; text-transform: uppercase; }}
+            .info-value {{ font-size: 11px; color: #1e293b; font-weight: 500; margin-top: 3px; }}
+            .description-box {{ background: #f8fafc; padding: 15px; border-radius: 5px; margin-top: 10px; }}
+            .status-badge {{ display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: bold; }}
+            .status-open {{ background: #fef3c7; color: #92400e; }}
+            .status-in_progress {{ background: #dbeafe; color: #1e40af; }}
+            .status-resolved {{ background: #d1fae5; color: #065f46; }}
+            .status-closed {{ background: #e2e8f0; color: #475569; }}
+            .signature-section {{ margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }}
+            .signature-box {{ border-top: 1px solid #333; padding-top: 10px; text-align: center; }}
+            .signature-label {{ font-size: 10px; color: #64748b; }}
+            .footer {{ margin-top: 30px; text-align: center; color: #94a3b8; font-size: 9px; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="company-info">
+                <div class="company-name">{company_name}</div>
+                <div class="company-details">{company_address}<br/>{company_phone}</div>
+            </div>
+            <div class="report-title">
+                <h1>SERVİS RAPORU</h1>
+                <div class="ticket-number">{ticket.get("ticket_number", "")}</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">MÜŞTERİ BİLGİLERİ</div>
+            <div class="info-grid">
+                <div class="info-box">
+                    <div class="info-label">Müşteri Adı</div>
+                    <div class="info-value">{customer.get("name", "-") if customer else "-"}</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">Firma</div>
+                    <div class="info-value">{customer.get("company", "-") if customer else "-"}</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">Telefon</div>
+                    <div class="info-value">{customer.get("phone", "-") if customer else "-"}</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">E-posta</div>
+                    <div class="info-value">{customer.get("email", "-") if customer else "-"}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">CİHAZ BİLGİLERİ</div>
+            <div class="info-grid">
+                <div class="info-box">
+                    <div class="info-label">Cihaz/Ürün</div>
+                    <div class="info-value">{asset.get("name", "-") if asset else "-"}</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">Marka / Model</div>
+                    <div class="info-value">{asset.get("brand", "-") if asset else "-"} / {asset.get("model", "-") if asset else "-"}</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">Seri No</div>
+                    <div class="info-value">{asset.get("serial_number", "-") if asset else "-"}</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">Tip</div>
+                    <div class="info-value">{asset.get("type", "-") if asset else "-"}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">SERVİS DETAYLARI</div>
+            <div class="info-grid">
+                <div class="info-box">
+                    <div class="info-label">Kayıt Tarihi</div>
+                    <div class="info-value">{created_date}</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">Öncelik</div>
+                    <div class="info-value">{priority_labels.get(ticket.get("priority", "medium"), "Orta")}</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">Kategori</div>
+                    <div class="info-value">{ticket.get("category", "-")}</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">Durum</div>
+                    <div class="info-value">
+                        <span class="status-badge status-{ticket.get("status", "open")}">{status_labels.get(ticket.get("status", "open"), "Açık")}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">ARIZA AÇIKLAMASI</div>
+            <div class="description-box">
+                <strong>{ticket.get("title", "")}</strong>
+                <p style="margin-top: 10px;">{ticket.get("description", "-")}</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">YAPILAN İŞLEMLER / NOTLAR</div>
+            <div class="description-box" style="min-height: 80px;">
+                {ticket.get("resolution_notes", ticket.get("internal_notes", ""))}
+            </div>
+        </div>
+        
+        <div class="signature-section">
+            <div class="signature-box">
+                <div class="signature-label">Teknisyen İmzası</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-label">Müşteri İmzası</div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Bu belge {company_name} tarafından elektronik ortamda oluşturulmuştur.</p>
+        </div>
+    </body>
+    </html>
+    """
+
+@api_router.get("/tickets/{ticket_id}/service-report/pdf")
+async def download_service_report_pdf(ticket_id: str, current_user: User = Depends(get_current_user)):
+    """Download service report as PDF"""
+    try:
+        from weasyprint import HTML
+    except ImportError:
+        raise HTTPException(status_code=500, detail="PDF generation library not available")
+    
+    ticket = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket bulunamadı")
+    
+    customer = await db.customers.find_one({"id": ticket.get("customer_id")}, {"_id": 0})
+    asset = None
+    if ticket.get("asset_id"):
+        asset = await db.assets.find_one({"id": ticket.get("asset_id")}, {"_id": 0})
+    
+    settings = await db.settings.find_one({"type": "system"}, {"_id": 0})
+    
+    html_content = generate_service_report_pdf_html(ticket, customer, asset, settings)
+    
+    pdf_buffer = io.BytesIO()
+    HTML(string=html_content).write_pdf(pdf_buffer)
+    pdf_buffer.seek(0)
+    
+    filename = f"Servis_Raporu_{ticket.get('ticket_number', ticket_id)}.pdf"
+    
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
 @api_router.get("/invoices/{invoice_id}/pdf")
 async def download_invoice_pdf(invoice_id: str, current_user: User = Depends(get_current_user)):
     """Download invoice as PDF"""
