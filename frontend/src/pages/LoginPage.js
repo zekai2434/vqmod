@@ -69,9 +69,9 @@ export default function LoginPage() {
             )}
             <div>
               <h1 className="text-2xl font-bold text-white tracking-tight" style={{fontFamily: 'Chivo, sans-serif'}}>
-                NetOps Pro
+                {settings?.company_name || 'NetOps Pro'}
               </h1>
-              <p className="text-xs text-slate-400 uppercase tracking-wider">Teknik Servis Yönetimi</p>
+              <p className="text-xs text-slate-400 uppercase tracking-wider">{settings?.company_slogan || 'Teknik Servis Yönetimi'}</p>
             </div>
           </div>
 
