@@ -101,6 +101,9 @@ function App() {
             <Route path="quotes" element={<QuoteList />} />
             <Route path="quotes/new" element={<QuoteCreate />} />
             <Route path="quotes/:quoteId" element={<QuoteCreate />} />
+            <Route path="ledger" element={<LedgerList />} />
+            <Route path="invoices" element={<InvoiceList />} />
+            <Route path="invoices/:id" element={<InvoiceDetail />} />
           </Route>
         </Routes>
       </BrowserRouter>
