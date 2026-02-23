@@ -2283,6 +2283,99 @@ async def update_rma(rma_id: str, update: RMAUpdate, current_user: User = Depend
         rma['received_date'] = datetime.fromisoformat(rma['received_date'])
     return RMA(**rma)
 
+# ========== CONTRACT ENDPOINTS ==========
+@api_router.post("/contracts", response_model=Contract)
+async def create_contract(contract: ContractCreate, current_user: User = Depends(get_current_user)):
+    contract_count = await db.contracts.count_documents({})
+    contract_number = f"CNT-{contract_count + 1:05d}"
+    
+    contract_obj = Contract(
+        **contract.model_dump(),
+        contract_number=contract_number
+    )
+    doc = contract_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    doc['updated_at'] = doc['updated_at'].isoformat()
+    await db.contracts.insert_one(doc)
+    return contract_obj
+
+@api_router.get("/contracts", response_model=List[Contract])
+async def get_contracts(customer_id: Optional[str] = None, status: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    query = {}
+    if customer_id:
+        query["customer_id"] = customer_id
+    if status:
+        query["status"] = status
+    
+    contracts = await db.contracts.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    for c in contracts:
+        if isinstance(c['created_at'], str):
+            c['created_at'] = datetime.fromisoformat(c['created_at'])
+        if isinstance(c['updated_at'], str):
+            c['updated_at'] = datetime.fromisoformat(c['updated_at'])
+    return contracts
+
+@api_router.get("/contracts/{contract_id}", response_model=Contract)
+async def get_contract(contract_id: str, current_user: User = Depends(get_current_user)):
+    contract = await db.contracts.find_one({"id": contract_id}, {"_id": 0})
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    if isinstance(contract['created_at'], str):
+        contract['created_at'] = datetime.fromisoformat(contract['created_at'])
+    if isinstance(contract['updated_at'], str):
+        contract['updated_at'] = datetime.fromisoformat(contract['updated_at'])
+    return Contract(**contract)
+
+@api_router.patch("/contracts/{contract_id}", response_model=Contract)
+async def update_contract(contract_id: str, update: ContractUpdate, current_user: User = Depends(get_current_user)):
+    contract = await db.contracts.find_one({"id": contract_id}, {"_id": 0})
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.contracts.update_one({"id": contract_id}, {"$set": update_data})
+    
+    updated = await db.contracts.find_one({"id": contract_id}, {"_id": 0})
+    if isinstance(updated['created_at'], str):
+        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    if isinstance(updated['updated_at'], str):
+        updated['updated_at'] = datetime.fromisoformat(updated['updated_at'])
+    return Contract(**updated)
+
+@api_router.delete("/contracts/{contract_id}")
+async def delete_contract(contract_id: str, current_user: User = Depends(get_current_user)):
+    result = await db.contracts.delete_one({"id": contract_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Contract not found")
+    return {"message": "Contract deleted"}
+
+@api_router.get("/contracts/expiring/list")
+async def get_expiring_contracts(days: int = 30, current_user: User = Depends(get_current_user)):
+    """Get contracts expiring within specified days"""
+    contracts = await db.contracts.find({"status": "active"}, {"_id": 0}).to_list(10000)
+    
+    now = datetime.now(timezone.utc)
+    warning_date = now + timedelta(days=days)
+    
+    expiring = []
+    for c in contracts:
+        if c.get('end_date'):
+            try:
+                end_date = datetime.fromisoformat(c['end_date'].replace('Z', '+00:00'))
+                if end_date.tzinfo is None:
+                    end_date = end_date.replace(tzinfo=timezone.utc)
+                
+                if now <= end_date <= warning_date:
+                    days_remaining = (end_date - now).days
+                    expiring.append({**c, "days_remaining": days_remaining})
+            except:
+                pass
+    
+    expiring.sort(key=lambda x: x['days_remaining'])
+    return expiring
+
 @api_router.get("/reports/dashboard")
 async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
     total_tickets = await db.tickets.count_documents({})
