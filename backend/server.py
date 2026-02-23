@@ -4142,6 +4142,63 @@ async def toggle_portal_user_active(user_id: str, current_user: User = Depends(g
     
     return {"message": f"Kullanıcı {'aktif' if new_status else 'devre dışı'}", "is_active": new_status}
 
+class PortalUserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    customer_id: Optional[str] = None
+
+class PortalUserPasswordReset(BaseModel):
+    new_password: str
+
+@api_router.patch("/portal-users/{user_id}")
+async def update_portal_user(user_id: str, update: PortalUserUpdate, current_user: User = Depends(get_current_user)):
+    """Update portal user details"""
+    user = await db.portal_users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Portal kullanıcısı bulunamadı")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    
+    if "email" in update_data and update_data["email"] != user.get("email"):
+        existing = await db.portal_users.find_one({"email": update_data["email"], "id": {"$ne": user_id}})
+        if existing:
+            raise HTTPException(status_code=400, detail="Bu e-posta adresi zaten kullanımda")
+    
+    if update_data:
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.portal_users.update_one({"id": user_id}, {"$set": update_data})
+    
+    updated = await db.portal_users.find_one({"id": user_id}, {"_id": 0, "hashed_password": 0})
+    return updated
+
+@api_router.post("/portal-users/{user_id}/reset-password")
+async def reset_portal_user_password(user_id: str, data: PortalUserPasswordReset, current_user: User = Depends(get_current_user)):
+    """Reset portal user password"""
+    user = await db.portal_users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Portal kullanıcısı bulunamadı")
+    
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Şifre en az 6 karakter olmalı")
+    
+    hashed = pwd_context.hash(data.new_password)
+    await db.portal_users.update_one(
+        {"id": user_id}, 
+        {"$set": {"hashed_password": hashed, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": "Şifre başarıyla değiştirildi"}
+
+@api_router.delete("/portal-users/{user_id}")
+async def delete_portal_user(user_id: str, current_user: User = Depends(get_current_user)):
+    """Delete portal user"""
+    result = await db.portal_users.delete_one({"id": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Portal kullanıcısı bulunamadı")
+    
+    return {"message": "Kullanıcı silindi"}
+
 # ========== WHATSAPP INTEGRATION ENDPOINTS ==========
 
 WHATSAPP_SERVICE_URL = os.environ.get('WHATSAPP_SERVICE_URL', 'http://localhost:3002')
