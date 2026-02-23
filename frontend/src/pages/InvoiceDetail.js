@@ -35,13 +35,22 @@ export default function InvoiceDetail() {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
       
-      const [invoiceRes, settingsRes] = await Promise.all([
-        axios.get(`${API}/invoices/${id}`, { headers }),
-        axios.get(`${API}/settings`, { headers })
-      ]);
-      
+      // Fetch invoice first
+      const invoiceRes = await axios.get(`${API}/invoices/${id}`, { headers });
       setInvoice(invoiceRes.data);
-      setSettings(settingsRes.data);
+      
+      // Try to fetch settings, but don't fail if it doesn't exist
+      try {
+        const settingsRes = await axios.get(`${API}/settings/system`, { headers });
+        setSettings(settingsRes.data);
+      } catch (settingsError) {
+        // Settings not found, use defaults
+        setSettings({
+          company_name: 'Dropsan Elektronik',
+          company_address: '',
+          company_phone: ''
+        });
+      }
     } catch (error) {
       toast.error("Fatura yüklenirken hata oluştu");
     } finally {
