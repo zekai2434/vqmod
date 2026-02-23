@@ -78,6 +78,8 @@ export default function TicketDetail() {
       if (ticketRes.data.asset_id) {
         const assetRes = await axios.get(`${API}/assets/${ticketRes.data.asset_id}`, { headers });
         setAsset(assetRes.data);
+      } else {
+        setAsset(null);
       }
 
       const commentsRes = await axios.get(`${API}/tickets/${id}/comments`, { headers });
@@ -91,6 +93,10 @@ export default function TicketDetail() {
 
       const usersRes = await axios.get(`${API}/users`, { headers });
       setUsers(usersRes.data);
+
+      // Fetch customer assets for editing
+      const assetsRes = await axios.get(`${API}/assets?customer_id=${ticketRes.data.customer_id}`, { headers });
+      setAssets(assetsRes.data);
     } catch (error) {
       toast.error("Ticket detayları yüklenirken hata oluştu");
     } finally {
