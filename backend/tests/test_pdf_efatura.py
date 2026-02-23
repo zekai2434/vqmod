@@ -47,18 +47,34 @@ class TestPDFAndEFatura:
         
         yield
     
+    def create_quote_item(self, description, quantity, unit_price, vat_rate=20):
+        """Helper to create properly formatted quote item"""
+        subtotal = quantity * unit_price
+        vat_amount = subtotal * vat_rate / 100
+        total = subtotal + vat_amount
+        return {
+            "description": description,
+            "quantity": quantity,
+            "unit": "adet",
+            "unit_price": unit_price,
+            "vat_rate": vat_rate,
+            "subtotal": subtotal,
+            "vat_amount": vat_amount,
+            "total": total
+        }
+    
     # ========== QUOTE PDF TESTS ==========
     
     def test_quote_pdf_download(self):
         """Test downloading quote as PDF"""
-        # First create a quote
+        # First create a quote with properly formatted items
+        items = [self.create_quote_item("Test Service", 1, 100)]
+        
         quote_res = self.session.post(f"{BASE_URL}/api/quotes", json={
             "customer_id": self.customer_id,
             "subject": "TEST_PDF_Quote",
-            "items": [
-                {"name": "Test Service", "quantity": 1, "price": 100, "vat_rate": 20}
-            ],
-            "valid_until": "2026-12-31"
+            "items": items,
+            "validity_days": 30
         })
         assert quote_res.status_code in [200, 201], f"Quote creation failed: {quote_res.text}"
         quote_id = quote_res.json()["id"]
@@ -83,17 +99,19 @@ class TestPDFAndEFatura:
     
     def test_accept_quote_creates_invoice(self):
         """Test accepting a quote creates an invoice"""
-        # Create a quote
+        # Create a quote with properly formatted items
+        items = [
+            self.create_quote_item("Service A", 2, 150),
+            self.create_quote_item("Service B", 1, 200)
+        ]
+        
         quote_res = self.session.post(f"{BASE_URL}/api/quotes", json={
             "customer_id": self.customer_id,
             "subject": "TEST_Accept_Quote",
-            "items": [
-                {"name": "Service A", "quantity": 2, "price": 150, "vat_rate": 20},
-                {"name": "Service B", "quantity": 1, "price": 200, "vat_rate": 20}
-            ],
-            "valid_until": "2026-12-31"
+            "items": items,
+            "validity_days": 30
         })
-        assert quote_res.status_code in [200, 201]
+        assert quote_res.status_code in [200, 201], f"Quote creation failed: {quote_res.text}"
         quote_id = quote_res.json()["id"]
         
         # Update quote status to 'sent' first (required for accept)
@@ -122,11 +140,13 @@ class TestPDFAndEFatura:
     def test_accept_already_accepted_quote(self):
         """Test accepting an already accepted quote fails"""
         # Create and accept a quote
+        items = [self.create_quote_item("Test", 1, 100)]
+        
         quote_res = self.session.post(f"{BASE_URL}/api/quotes", json={
             "customer_id": self.customer_id,
             "subject": "TEST_Double_Accept",
-            "items": [{"name": "Test", "quantity": 1, "price": 100, "vat_rate": 20}],
-            "valid_until": "2026-12-31"
+            "items": items,
+            "validity_days": 30
         })
         quote_id = quote_res.json()["id"]
         
