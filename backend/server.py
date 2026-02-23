@@ -1637,7 +1637,17 @@ async def update_ticket(ticket_id: str, update: TicketUpdate, current_user: User
     old_assigned = ticket.get('assigned_to')
     old_asset_id = ticket.get('asset_id')
     
-    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    # Build update data - filter None except for asset_id which can be explicitly set to None
+    update_dict = update.model_dump()
+    update_data = {}
+    for k, v in update_dict.items():
+        if k == 'asset_id':
+            # asset_id can be explicitly set to None (to remove asset from ticket)
+            # Only include if it was explicitly provided in the request
+            if 'asset_id' in update.model_fields_set:
+                update_data[k] = v
+        elif v is not None:
+            update_data[k] = v
     update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
     
     if update.status == "resolved" or update.status == "closed":
