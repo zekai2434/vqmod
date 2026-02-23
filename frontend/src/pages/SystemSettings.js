@@ -20,7 +20,12 @@ import {
   Mail,
   MapPin,
   Link as LinkIcon,
-  CheckCircle
+  CheckCircle,
+  CreditCard,
+  FileText,
+  Key,
+  ExternalLink,
+  AlertCircle
 } from "lucide-react";
 
 const API = process.env.REACT_APP_BACKEND_URL;
