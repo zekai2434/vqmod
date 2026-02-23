@@ -54,6 +54,13 @@ export default function DashboardLayout() {
       ]
     },
     {
+      label: "Finans",
+      items: [
+        { path: "/ledger", icon: Wallet, label: "Cariler" },
+        { path: "/invoices", icon: Receipt, label: "Faturalar" },
+      ]
+    },
+    {
       label: "İletişim",
       items: [
         { path: "/notifications", icon: Bell, label: "Bildirimler" },
