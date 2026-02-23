@@ -5,7 +5,7 @@ import json
 import base64
 
 class NetworkServiceAPITester:
-    def __init__(self, base_url="https://ticket-yonetim.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://crm-helpdesk-sys.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
         self.tests_run = 0
