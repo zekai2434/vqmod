@@ -977,14 +977,14 @@ export default function TicketDetail() {
             <div className="space-y-2">
               <Label>Atanan Teknisyen</Label>
               <Select 
-                value={editFormData.assigned_to} 
-                onValueChange={(v) => setEditFormData({...editFormData, assigned_to: v})}
+                value={editFormData.assigned_to || "none"} 
+                onValueChange={(v) => setEditFormData({...editFormData, assigned_to: v === "none" ? "" : v})}
               >
                 <SelectTrigger data-testid="edit-ticket-assignee">
                   <SelectValue placeholder="Teknisyen seçin" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Atanmamış</SelectItem>
+                  <SelectItem value="none">Atanmamış</SelectItem>
                   {technicians.map(u => (
                     <SelectItem key={u.id} value={u.id}>{u.full_name}</SelectItem>
                   ))}
@@ -999,14 +999,14 @@ export default function TicketDetail() {
                 Cihaz
               </Label>
               <Select 
-                value={editFormData.asset_id} 
-                onValueChange={(v) => setEditFormData({...editFormData, asset_id: v})}
+                value={editFormData.asset_id || "none"} 
+                onValueChange={(v) => setEditFormData({...editFormData, asset_id: v === "none" ? "" : v})}
               >
                 <SelectTrigger data-testid="edit-ticket-asset">
                   <SelectValue placeholder="Cihaz seçin (opsiyonel)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Cihaz Yok</SelectItem>
+                  <SelectItem value="none">Cihaz Yok</SelectItem>
                   {assets.map(a => (
                     <SelectItem key={a.id} value={a.id}>
                       {a.brand} {a.model} - {a.serial_number}
