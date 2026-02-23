@@ -765,6 +765,125 @@ export default function InvoiceList() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Add Customer Dialog */}
+      <Dialog open={customerDialogOpen} onOpenChange={setCustomerDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5" />
+              Hızlı Müşteri Ekle
+            </DialogTitle>
+            <DialogDescription>
+              Yeni müşteri bilgilerini girin. Müşteri eklendikten sonra otomatik seçilecektir.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Ad Soyad *</Label>
+                <Input
+                  value={customerForm.name}
+                  onChange={(e) => setCustomerForm({...customerForm, name: e.target.value})}
+                  placeholder="Ahmet Yılmaz"
+                  data-testid="invoice-new-customer-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Firma</Label>
+                <Input
+                  value={customerForm.company}
+                  onChange={(e) => setCustomerForm({...customerForm, company: e.target.value})}
+                  placeholder="ABC Teknoloji"
+                  data-testid="invoice-new-customer-company"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>E-posta *</Label>
+                <Input
+                  type="email"
+                  value={customerForm.email}
+                  onChange={(e) => setCustomerForm({...customerForm, email: e.target.value})}
+                  placeholder="ahmet@firma.com"
+                  data-testid="invoice-new-customer-email"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Telefon</Label>
+                <Input
+                  value={customerForm.phone}
+                  onChange={(e) => setCustomerForm({...customerForm, phone: e.target.value})}
+                  placeholder="0532 123 4567"
+                  data-testid="invoice-new-customer-phone"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Adres</Label>
+              <Textarea
+                value={customerForm.address}
+                onChange={(e) => setCustomerForm({...customerForm, address: e.target.value})}
+                placeholder="Firma adresi"
+                rows={2}
+                data-testid="invoice-new-customer-address"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Vergi No</Label>
+                <Input
+                  value={customerForm.tax_number}
+                  onChange={(e) => setCustomerForm({...customerForm, tax_number: e.target.value})}
+                  placeholder="1234567890"
+                  data-testid="invoice-new-customer-tax-number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Vergi Dairesi</Label>
+                <Input
+                  value={customerForm.tax_office}
+                  onChange={(e) => setCustomerForm({...customerForm, tax_office: e.target.value})}
+                  placeholder="Kadıköy VD"
+                  data-testid="invoice-new-customer-tax-office"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-4 border-t">
+              <Button 
+                onClick={handleAddCustomer} 
+                disabled={savingCustomer}
+                data-testid="invoice-save-new-customer-btn"
+              >
+                {savingCustomer ? "Ekleniyor..." : "Müşteri Ekle"}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setCustomerDialogOpen(false);
+                  setCustomerForm({
+                    name: "",
+                    company: "",
+                    email: "",
+                    phone: "",
+                    address: "",
+                    tax_number: "",
+                    tax_office: ""
+                  });
+                }}
+              >
+                İptal
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
