@@ -57,7 +57,7 @@ export default function Dashboard() {
       in_progress: "bg-amber-500/10 text-amber-400 border-amber-500/20",
       on_hold: "bg-orange-500/10 text-orange-400 border-orange-500/20",
       resolved: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-      closed: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20"
+      closed: "bg-zinc-500/10 text-slate-300 border-zinc-500/20"
     };
     const labels = {
       open: "Açık",
@@ -78,7 +78,7 @@ export default function Dashboard() {
       critical: "bg-rose-500/10 text-rose-400 border-rose-500/20",
       high: "bg-orange-500/10 text-orange-400 border-orange-500/20",
       medium: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-      low: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20"
+      low: "bg-zinc-500/10 text-slate-300 border-zinc-500/20"
     };
     const labels = {
       critical: "Kritik",
@@ -96,7 +96,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="flex items-center gap-3 text-zinc-400">
+        <div className="flex items-center gap-3 text-slate-300">
           <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
           <span>Yükleniyor...</span>
         </div>
@@ -114,7 +114,7 @@ export default function Dashboard() {
             <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider">Canlı Veri</span>
           </div>
           <h1 className="text-4xl font-bold text-white tracking-tight" style={{fontFamily: 'Chivo, sans-serif'}}>Dashboard</h1>
-          <p className="text-zinc-400 mt-1">Teknik servis operasyonlarına genel bakış</p>
+          <p className="text-slate-300 mt-1">Teknik servis operasyonlarına genel bakış</p>
         </div>
         <Link to="/tickets/new">
           <Button data-testid="new-ticket-btn" className="bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-500/25">
@@ -134,7 +134,7 @@ export default function Dashboard() {
           >
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{stat.label}</p>
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{stat.label}</p>
                 <p className="text-4xl font-bold text-white mt-2" style={{fontFamily: 'Chivo, sans-serif'}}>
                   {stat.value}
                 </p>
@@ -143,7 +143,7 @@ export default function Dashboard() {
                 <stat.icon className="w-6 h-6 text-white" strokeWidth={1.5} />
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-zinc-800/60">
+            <div className="mt-4 pt-4 border-t border-slate-700/60">
               <div className="flex items-center gap-2 text-emerald-400 text-sm">
                 <TrendingUp className="w-4 h-4" />
                 <span>Son 7 gün</span>
@@ -160,17 +160,17 @@ export default function Dashboard() {
             <div className="glass-card rounded-xl p-5 card-hover group">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center group-hover:bg-zinc-700 transition-colors">
-                    <stat.icon className="w-5 h-5 text-zinc-400" strokeWidth={1.5} />
+                  <div className="w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center group-hover:bg-slate-600 transition-colors">
+                    <stat.icon className="w-5 h-5 text-slate-300" strokeWidth={1.5} />
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{stat.label}</p>
+                    <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{stat.label}</p>
                     <p className="text-2xl font-bold text-white" style={{fontFamily: 'Chivo, sans-serif'}}>
                       {stat.value}
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="w-5 h-5 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+                <ArrowRight className="w-5 h-5 text-slate-500 group-hover:text-slate-300 transition-colors" />
               </div>
             </div>
           </Link>
@@ -179,18 +179,18 @@ export default function Dashboard() {
 
       {/* Recent Tickets */}
       <div className="glass-card rounded-xl overflow-hidden" data-testid="recent-tickets-card">
-        <div className="flex items-center justify-between p-5 border-b border-zinc-800/60">
+        <div className="flex items-center justify-between p-5 border-b border-slate-700/60">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
               <Activity className="w-5 h-5 text-blue-400" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-white">Son Ticketlar</h2>
-              <p className="text-xs text-zinc-500">En son oluşturulan destek talepleri</p>
+              <p className="text-xs text-slate-400">En son oluşturulan destek talepleri</p>
             </div>
           </div>
           <Link to="/tickets">
-            <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white" data-testid="view-all-tickets-btn">
+            <Button variant="ghost" size="sm" className="text-slate-300 hover:text-white" data-testid="view-all-tickets-btn">
               Tümünü Gör
               <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
@@ -201,7 +201,7 @@ export default function Dashboard() {
           {recentTickets.length === 0 ? (
             <div className="text-center py-12">
               <Ticket className="w-12 h-12 text-zinc-700 mx-auto mb-3" />
-              <p className="text-zinc-500">Henüz ticket yok</p>
+              <p className="text-slate-400">Henüz ticket yok</p>
             </div>
           ) : (
             recentTickets.map((ticket) => (
@@ -211,7 +211,7 @@ export default function Dashboard() {
                 data-testid={`ticket-${ticket.ticket_number}`}
                 className="block"
               >
-                <div className="flex items-center justify-between p-4 hover:bg-zinc-800/30 transition-colors">
+                <div className="flex items-center justify-between p-4 hover:bg-slate-700/30 transition-colors">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-1">
                       <span className="font-mono text-sm font-medium text-blue-400">{ticket.ticket_number}</span>
@@ -219,16 +219,16 @@ export default function Dashboard() {
                       {getPriorityBadge(ticket.priority)}
                     </div>
                     <p className="font-medium text-white truncate">{ticket.title}</p>
-                    <p className="text-sm text-zinc-500 mt-0.5">{ticket.category}</p>
+                    <p className="text-sm text-slate-400 mt-0.5">{ticket.category}</p>
                   </div>
                   <div className="text-right ml-4">
-                    <p className="text-sm text-zinc-400">
+                    <p className="text-sm text-slate-300">
                       {new Date(ticket.created_at).toLocaleDateString('tr-TR', {
                         day: 'numeric',
                         month: 'short'
                       })}
                     </p>
-                    <p className="text-xs text-zinc-600">
+                    <p className="text-xs text-slate-500">
                       {new Date(ticket.created_at).toLocaleTimeString('tr-TR', {
                         hour: '2-digit',
                         minute: '2-digit'
