@@ -195,6 +195,10 @@ export default function SystemSettings() {
             <Globe className="w-4 h-4 mr-2" />
             Portal Ayarları
           </TabsTrigger>
+          <TabsTrigger value="integrations" className="data-[state=active]:bg-slate-700">
+            <Key className="w-4 h-4 mr-2" />
+            Entegrasyonlar
+          </TabsTrigger>
         </TabsList>
 
         {/* Company Info Tab */}
