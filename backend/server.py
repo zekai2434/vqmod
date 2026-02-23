@@ -1023,6 +1023,61 @@ class ContractUpdate(BaseModel):
     notes: Optional[str] = None
     status: Optional[str] = None
 
+# ========== QUOTE MODELS ==========
+class QuoteItem(BaseModel):
+    description: str
+    quantity: int = 1
+    unit: str = "adet"
+    unit_price: float
+    vat_rate: int = 20
+    subtotal: float
+    vat_amount: float
+    total: float
+
+class Quote(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    quote_number: str
+    customer_id: str
+    subject: Optional[str] = None
+    validity_days: int = 30
+    valid_until: str
+    payment_terms: str = "pesin"
+    payment_notes: Optional[str] = None
+    notes: Optional[str] = None
+    items: List[QuoteItem] = []
+    subtotal: float = 0.0
+    total_vat: float = 0.0
+    grand_total: float = 0.0
+    currency: str = "TRY"
+    status: str = "draft"  # draft, sent, accepted, rejected, expired
+    created_by: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    sent_at: Optional[str] = None
+    accepted_at: Optional[str] = None
+    rejected_at: Optional[str] = None
+
+class QuoteCreate(BaseModel):
+    customer_id: str
+    subject: Optional[str] = None
+    validity_days: int = 30
+    payment_terms: str = "pesin"
+    payment_notes: Optional[str] = None
+    notes: Optional[str] = None
+    items: List[dict] = []
+    currency: str = "TRY"
+
+class QuoteUpdate(BaseModel):
+    customer_id: Optional[str] = None
+    subject: Optional[str] = None
+    validity_days: Optional[int] = None
+    payment_terms: Optional[str] = None
+    payment_notes: Optional[str] = None
+    notes: Optional[str] = None
+    items: Optional[List[dict]] = None
+    status: Optional[str] = None
+
 # Email Templates
 EMAIL_TEMPLATES = {
     "ticket_created": {
