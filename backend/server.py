@@ -5014,6 +5014,12 @@ class SystemSettings(BaseModel):
     portal_logo_url: Optional[str] = None
     # Footer
     footer_text: Optional[str] = None
+    # Integration Settings - BizimHesap
+    bizimhesap_firm_id: Optional[str] = None
+    # Integration Settings - iyzico
+    iyzico_api_key: Optional[str] = None
+    iyzico_secret_key: Optional[str] = None
+    iyzico_base_url: str = "sandbox"  # sandbox or production
     # Updated
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -5032,6 +5038,11 @@ class SystemSettingsUpdate(BaseModel):
     portal_welcome_message: Optional[str] = None
     portal_logo_url: Optional[str] = None
     footer_text: Optional[str] = None
+    # Integration Settings
+    bizimhesap_firm_id: Optional[str] = None
+    iyzico_api_key: Optional[str] = None
+    iyzico_secret_key: Optional[str] = None
+    iyzico_base_url: Optional[str] = None
 
 @api_router.get("/settings/system")
 async def get_system_settings():
