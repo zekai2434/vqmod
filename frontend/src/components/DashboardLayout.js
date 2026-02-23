@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Ticket, Users, Package, HardDrive, Wrench, FileText, Settings, LogOut, Menu, X, Bell, Clock, Shield, Mail, MessageCircle, UserCircle, ChevronRight, Activity, Cog, ScrollText } from "lucide-react";
+import { LayoutDashboard, Ticket, Users, Package, HardDrive, Wrench, FileText, Settings, LogOut, Menu, X, Bell, Clock, Shield, Mail, MessageCircle, UserCircle, ChevronRight, Activity, Cog, ScrollText, FilePlus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
