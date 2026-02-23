@@ -48,6 +48,7 @@ export default function DashboardLayout() {
         { path: "/work-orders", icon: Wrench, label: "İş Emirleri" },
         { path: "/parts", icon: Package, label: "Parçalar" },
         { path: "/rma", icon: FileText, label: "RMA" },
+        { path: "/contracts", icon: ScrollText, label: "Sözleşmeler" },
         { path: "/reports", icon: Activity, label: "Raporlar" },
       ]
     },
