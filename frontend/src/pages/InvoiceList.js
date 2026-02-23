@@ -65,6 +65,19 @@ export default function InvoiceList() {
     payment_method: "cash",
     notes: ""
   });
+  
+  // New customer dialog
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const [customerForm, setCustomerForm] = useState({
+    name: "",
+    company: "",
+    email: "",
+    phone: "",
+    address: "",
+    tax_number: "",
+    tax_office: ""
+  });
+  const [savingCustomer, setSavingCustomer] = useState(false);
 
   useEffect(() => {
     fetchData();
