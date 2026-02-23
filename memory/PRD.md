@@ -21,74 +21,69 @@ Network cihazları için kapsamlı teknik servis yönetim yazılımı.
 13. ✅ Ticket Timeline/Zaman Çizelgesi
 14. ✅ Yazdırılabilir Teknik Servis Raporu
 15. ✅ Teklif Yönetimi (Tam CRUD)
-16. ✅ **CARİ HESAP YÖNETİMİ (YENİ)**
-17. ✅ **FATURALAMA SİSTEMİ (YENİ)**
-18. ✅ **TAHSİLAT YÖNETİMİ (YENİ)**
+16. ✅ Cari Hesap Yönetimi
+17. ✅ Faturalama Sistemi
+18. ✅ Tahsilat Yönetimi
+19. ✅ **PDF İndirme Özelliği (YENİ)**
+20. ✅ **Tekliften Otomatik Fatura Oluşturma (YENİ)**
+21. ✅ **BizimHesap E-Fatura Entegrasyonu (YENİ)**
 
-## Son Güncelleme (Şubat 2026)
+## Son Güncelleme (23 Şubat 2026)
 
-### Cari Hesap Yönetimi - YENİ
-- [x] **Müşteri Bakiyeleri**: Tüm müşterilerin borç/alacak durumu
-- [x] **Cari Özeti**: Toplam Alacak, Toplam Borç, Net Bakiye kartları
-- [x] **Cari Hareketler**: Fatura, tahsilat, iade, açılış bakiyesi
-- [x] **Açılış Bakiyesi**: Yeni müşteriler için başlangıç bakiyesi girişi
-- [x] **Cari Detay**: Müşteri bazlı hareket listesi ve güncel bakiye
+### PDF İndirme Özelliği - YENİ ✅
+- [x] **Fatura PDF**: Profesyonel fatura dökümanı oluşturma ve indirme
+- [x] **Teklif PDF**: Teklif dökümanı oluşturma ve indirme
+- [x] **Servis Raporu PDF**: Ticket için teknik servis raporu oluşturma
+- [x] **fpdf2 Kütüphanesi**: Türkçe karakter desteği ile PDF oluşturma
 
-### Faturalama Sistemi - YENİ
-- [x] **Fatura Oluşturma**: Çoklu kalem desteği, KDV ve iskonto hesaplama
-- [x] **Fatura Durumları**: Taslak, Bekliyor, Kısmi Ödeme, Ödendi, Gecikmiş
-- [x] **Fatura Onaylama**: Taslak faturayı onaylayınca cariye otomatik borç işleme
-- [x] **Fatura İstatistikleri**: Toplam fatura, tahsil edilen, bekleyen, tahsilat oranı
-- [x] **Fatura Yazdırma**: Profesyonel fatura çıktısı (logo, müşteri bilgileri, kalemler)
-- [x] **Vade Takibi**: Vade tarihi belirleme
+### Tekliften Otomatik Fatura Oluşturma - YENİ ✅
+- [x] **Kabul Et Butonu**: Gönderildi durumundaki tekliflerde "Kabul Et" butonu
+- [x] **Otomatik Fatura**: Teklif kabul edildiğinde otomatik fatura oluşturma
+- [x] **Kalem Aktarımı**: Teklif kalemleri faturaya otomatik aktarılır
+- [x] **Reddet Butonu**: Teklifi reddetme seçeneği
 
-### Tahsilat Yönetimi - YENİ
-- [x] **Tahsilat Kaydetme**: Faturaya bağlı veya serbest tahsilat
-- [x] **Ödeme Yöntemleri**: Nakit, Havale/EFT, Kredi Kartı, iyzico
-- [x] **Otomatik Cari Güncelleme**: Tahsilat kaydedilince cariye alacak işleme
-- [x] **Fatura Durumu Güncelleme**: Kısmi veya tam ödeme durumu
-
-### iyzico Entegrasyonu - HAZIR (API KEY GEREKLİ)
-- [x] **Endpoint Hazır**: `/api/payments/iyzico/create`
-- [ ] **Aktif Kullanım**: `IYZICO_API_KEY` ve `IYZICO_SECRET_KEY` gerekli
+### BizimHesap E-Fatura Entegrasyonu - YENİ ✅
+- [x] **E-Fatura Gönder Butonu**: Fatura detay sayfasında
+- [x] **Firm ID Yapılandırma**: Sistem ayarlarından yapılandırma
+- [x] **API Endpoint Hazır**: `/api/invoices/{id}/send-efatura`
+- [ ] **Aktif Kullanım**: BizimHesap Firm ID gerekli
 
 ## Önceki Güncellemeler
 
-### Cihaz Yönetimi (Tam CRUD)
-- [x] Cihaz Düzenleme/Silme
-- [x] Garanti takibi
-- [x] Müşteri bazlı filtreleme
+### Cari Hesap Yönetimi
+- [x] Müşteri Bakiyeleri
+- [x] Cari Özeti
+- [x] Cari Hareketler
+- [x] Açılış Bakiyesi
 
-### Ticket Düzenleme (Genişletilmiş)
-- [x] Başlık, açıklama, kategori, öncelik düzenleme
-- [x] Cihaz ekleme/değiştirme (ticketa sonradan cihaz ekleme)
-- [x] Teknisyen atama
-- [x] Değişiklik takibi (zaman çizelgesi)
+### Faturalama Sistemi
+- [x] Fatura Oluşturma
+- [x] Fatura Durumları
+- [x] Fatura Onaylama
+- [x] Vade Takibi
+
+### Tahsilat Yönetimi
+- [x] Tahsilat Kaydetme
+- [x] Ödeme Yöntemleri
+- [x] Otomatik Cari Güncelleme
 
 ## API Endpoints
 
-### Cari (Ledger) Endpoints - YENİ
-- `GET /api/ledger/summary` - Tüm müşteri bakiyeleri özeti
-- `GET /api/ledger/customer/{id}` - Müşteri cari hareketleri
-- `POST /api/ledger/opening-balance` - Açılış bakiyesi ekle
+### PDF Endpoints - YENİ
+- `GET /api/invoices/{id}/pdf` - Fatura PDF indir
+- `GET /api/quotes/{id}/pdf` - Teklif PDF indir
+- `GET /api/tickets/{id}/service-report/pdf` - Servis raporu PDF indir
 
-### Fatura (Invoice) Endpoints - YENİ
-- `GET /api/invoices` - Fatura listesi
-- `GET /api/invoices/{id}` - Fatura detayı
-- `POST /api/invoices` - Yeni fatura oluştur
-- `PATCH /api/invoices/{id}` - Fatura güncelle
-- `POST /api/invoices/{id}/finalize` - Faturayı onayla (cariye işle)
-- `DELETE /api/invoices/{id}` - Taslak fatura sil
-- `GET /api/invoices/stats/summary` - Fatura istatistikleri
+### Teklif Yaşam Döngüsü - YENİ
+- `POST /api/quotes/{id}/accept` - Teklifi kabul et ve fatura oluştur
 
-### Ödeme (Payment) Endpoints - YENİ
-- `GET /api/payments` - Tahsilat listesi
-- `GET /api/payments/{id}` - Tahsilat detayı
-- `POST /api/payments` - Tahsilat kaydet
-- `POST /api/payments/iyzico/create` - iyzico ile ödeme (API key gerekli)
+### E-Fatura - YENİ
+- `POST /api/invoices/{id}/send-efatura` - BizimHesap'a e-fatura gönder
+- `GET /api/settings/bizimhesap` - BizimHesap ayarlarını al
+- `POST /api/settings/bizimhesap` - BizimHesap Firm ID kaydet
 
 ## Test Sonuçları
-- Backend: %100 (19/19 test geçti - iteration_10)
+- Backend: %100 (11/11 test geçti - iteration_11)
 - Frontend: %100
 
 ## Test Bilgileri
@@ -97,19 +92,16 @@ Network cihazları için kapsamlı teknik servis yönetim yazılımı.
 ## FAZ-2 (Gelecek Geliştirmeler) - ÖNCELİK SIRALI
 
 ### P0 - Kritik
-- [ ] **server.py Refaktör**: 5500+ satırlık monolitik dosya modüllere ayrılmalı
+- [ ] **server.py Refaktör**: 5900+ satırlık monolitik dosya modüllere ayrılmalı
 
 ### P1 - Önemli
 - [ ] **iyzico Aktif Entegrasyon**: API anahtarları ile tam entegrasyon
-- [ ] PDF indirme özelliği (faturalar için)
-- [ ] Teklif yaşam döngüsü (Gönderildi, Kabul Edildi, Reddedildi)
-- [ ] Kabul edilen tekliften otomatik fatura oluşturma
+- [ ] **BizimHesap Aktif Kullanım**: Firm ID ile tam entegrasyon
 - [ ] Teknisyen performans raporu frontend entegrasyonu
 
 ### P2 - Orta Öncelik
 - [ ] Görüntü önizleme modal oturum sorunu düzeltme
 - [ ] Teklif şablon sistemi
-- [ ] E-fatura/E-arşiv entegrasyonu
 - [ ] Otomatik vade uyarıları
 
 ### P3 - Backlog
@@ -124,21 +116,22 @@ Network cihazları için kapsamlı teknik servis yönetim yazılımı.
 ├── backend/
 │   ├── .env
 │   ├── requirements.txt
-│   ├── server.py (5500+ satır - REFAKTÖR GEREKLİ)
+│   ├── server.py (5900+ satır - REFAKTÖR GEREKLİ)
 │   └── tests/
 │       ├── test_asset_ticket_edit.py
-│       └── test_ledger_invoice_payment.py (YENİ)
+│       ├── test_ledger_invoice_payment.py
+│       └── test_pdf_efatura.py (YENİ)
 ├── frontend/
 │   ├── .env
 │   ├── package.json
 │   └── src/
 │       ├── App.js
 │       ├── components/
-│       │   └── DashboardLayout.js (GÜNCELLENDI - Finans menüsü)
+│       │   └── DashboardLayout.js
 │       └── pages/
-│           ├── LedgerList.js (YENİ - Cariler)
-│           ├── InvoiceList.js (YENİ - Faturalar)
-│           ├── InvoiceDetail.js (YENİ - Fatura Detay/Yazdır)
+│           ├── QuoteList.js (GÜNCELLENDI - PDF ve Kabul/Red butonları)
+│           ├── InvoiceDetail.js (GÜNCELLENDI - PDF ve E-Fatura butonları)
+│           ├── TicketDetail.js (GÜNCELLENDI - Servis Raporu PDF butonu)
 │           └── ... diğer sayfalar
 └── whatsapp-service/
     └── index.js
@@ -150,3 +143,5 @@ Network cihazları için kapsamlı teknik servis yönetim yazılımı.
 - **IMAP (Email Ticketing):** Python imaplib
 - **WhatsApp:** Node.js microservice
 - **iyzico (Ödeme):** IYZICO_API_KEY, IYZICO_SECRET_KEY gerekli (HAZIR)
+- **BizimHesap (E-Fatura):** Firm ID gerekli (HAZIR)
+- **fpdf2 (PDF):** Aktif kullanımda ✅
