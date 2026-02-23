@@ -3728,6 +3728,19 @@ async def get_ticket_history(ticket_id: str, current_user: User = Depends(get_cu
             "metadata": {"final_status": ticket.get('status')}
         })
     
+    # 9. Asset Change Events (from ticket_history collection)
+    ticket_history_events = await db.ticket_history.find({"ticket_id": ticket_id}, {"_id": 0}).to_list(1000)
+    for event in ticket_history_events:
+        history_events.append({
+            "id": f"history-{event.get('id', str(uuid.uuid4()))}",
+            "event_type": event.get('event_type', 'unknown'),
+            "description": event.get('content', ''),
+            "timestamp": event.get('created_at'),
+            "user_id": event.get('user_id'),
+            "user_name": event.get('user_name') or user_map.get(event.get('user_id')),
+            "metadata": {}
+        })
+    
     # Sort by timestamp
     def get_timestamp(event):
         ts = event.get('timestamp')
