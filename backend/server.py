@@ -3798,6 +3798,149 @@ async def get_whatsapp_messages(
     
     return messages
 
+# ========== SYSTEM SETTINGS ENDPOINTS ==========
+
+class SystemSettings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = "system_settings"
+    # Company Info
+    company_name: str = "NetOps Pro"
+    company_slogan: str = "Teknik Servis Yönetimi"
+    company_phone: Optional[str] = None
+    company_email: Optional[str] = None
+    company_address: Optional[str] = None
+    company_website: Optional[str] = None
+    # Logo & Branding
+    logo_url: Optional[str] = None
+    logo_dark_url: Optional[str] = None
+    favicon_url: Optional[str] = None
+    # Theme
+    primary_color: str = "blue"  # blue, green, purple, orange, cyan
+    # Portal Settings
+    portal_title: str = "Müşteri Portalı"
+    portal_welcome_message: str = "Destek taleplerinizi takip edin ve yönetin"
+    portal_logo_url: Optional[str] = None
+    # Footer
+    footer_text: Optional[str] = None
+    # Updated
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SystemSettingsUpdate(BaseModel):
+    company_name: Optional[str] = None
+    company_slogan: Optional[str] = None
+    company_phone: Optional[str] = None
+    company_email: Optional[str] = None
+    company_address: Optional[str] = None
+    company_website: Optional[str] = None
+    logo_url: Optional[str] = None
+    logo_dark_url: Optional[str] = None
+    favicon_url: Optional[str] = None
+    primary_color: Optional[str] = None
+    portal_title: Optional[str] = None
+    portal_welcome_message: Optional[str] = None
+    portal_logo_url: Optional[str] = None
+    footer_text: Optional[str] = None
+
+@api_router.get("/settings/system")
+async def get_system_settings():
+    """Get system settings (public endpoint for frontend)"""
+    settings = await db.system_settings.find_one({"id": "system_settings"}, {"_id": 0})
+    
+    if not settings:
+        # Return default settings
+        default = SystemSettings()
+        return default.model_dump()
+    
+    return settings
+
+@api_router.patch("/settings/system")
+async def update_system_settings(update: SystemSettingsUpdate, current_user: User = Depends(get_current_user)):
+    """Update system settings (admin only)"""
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    existing = await db.system_settings.find_one({"id": "system_settings"}, {"_id": 0})
+    
+    if existing:
+        await db.system_settings.update_one(
+            {"id": "system_settings"},
+            {"$set": update_data}
+        )
+    else:
+        # Create with defaults + updates
+        default = SystemSettings()
+        doc = default.model_dump()
+        doc.update(update_data)
+        doc['updated_at'] = datetime.now(timezone.utc).isoformat()
+        await db.system_settings.insert_one(doc)
+    
+    updated = await db.system_settings.find_one({"id": "system_settings"}, {"_id": 0})
+    return updated
+
+@api_router.post("/settings/upload-logo")
+async def upload_logo(file: UploadFile = File(...), logo_type: str = "main", current_user: User = Depends(get_current_user)):
+    """Upload logo image"""
+    # Validate file type
+    allowed_types = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Sadece PNG, JPEG, SVG veya WebP dosyaları yüklenebilir")
+    
+    # Read file content
+    content = await file.read()
+    
+    # Max 2MB
+    if len(content) > 2 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Dosya boyutu 2MB'dan küçük olmalı")
+    
+    # Convert to base64 data URL
+    base64_content = base64.b64encode(content).decode('utf-8')
+    data_url = f"data:{file.content_type};base64,{base64_content}"
+    
+    # Update settings based on logo type
+    field_map = {
+        "main": "logo_url",
+        "dark": "logo_dark_url",
+        "favicon": "favicon_url",
+        "portal": "portal_logo_url"
+    }
+    
+    field = field_map.get(logo_type, "logo_url")
+    
+    existing = await db.system_settings.find_one({"id": "system_settings"}, {"_id": 0})
+    
+    if existing:
+        await db.system_settings.update_one(
+            {"id": "system_settings"},
+            {"$set": {field: data_url, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    else:
+        default = SystemSettings()
+        doc = default.model_dump()
+        doc[field] = data_url
+        doc['updated_at'] = datetime.now(timezone.utc).isoformat()
+        await db.system_settings.insert_one(doc)
+    
+    return {"success": True, "field": field, "message": "Logo yüklendi"}
+
+@api_router.delete("/settings/remove-logo")
+async def remove_logo(logo_type: str = "main", current_user: User = Depends(get_current_user)):
+    """Remove logo"""
+    field_map = {
+        "main": "logo_url",
+        "dark": "logo_dark_url",
+        "favicon": "favicon_url",
+        "portal": "portal_logo_url"
+    }
+    
+    field = field_map.get(logo_type, "logo_url")
+    
+    await db.system_settings.update_one(
+        {"id": "system_settings"},
+        {"$set": {field: None, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"success": True, "message": "Logo kaldırıldı"}
+
 app.include_router(api_router)
 
 app.add_middleware(
