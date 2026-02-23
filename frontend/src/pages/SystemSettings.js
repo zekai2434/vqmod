@@ -47,7 +47,12 @@ export default function SystemSettings() {
     portal_title: "Müşteri Portalı",
     portal_welcome_message: "Destek taleplerinizi takip edin ve yönetin",
     portal_logo_url: null,
-    footer_text: ""
+    footer_text: "",
+    // Integration settings
+    bizimhesap_firm_id: "",
+    iyzico_api_key: "",
+    iyzico_secret_key: "",
+    iyzico_base_url: "sandbox" // sandbox or production
   });
 
   const fileInputRef = useRef(null);
