@@ -88,6 +88,7 @@ function App() {
             <Route path="email-settings" element={<EmailSettings />} />
             <Route path="whatsapp" element={<WhatsAppSettings />} />
             <Route path="portal-users" element={<PortalUserList />} />
+            <Route path="settings" element={<SystemSettings />} />
           </Route>
         </Routes>
       </BrowserRouter>
