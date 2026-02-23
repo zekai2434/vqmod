@@ -172,6 +172,28 @@ export default function TicketDetail() {
     }
   };
 
+  const handleDownloadServiceReportPDF = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/tickets/${id}/service-report/pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Servis_Raporu_${ticket?.ticket_number || id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("PDF indiriliyor...");
+    } catch (error) {
+      toast.error("PDF indirme başarısız");
+    }
+  };
+
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
 
