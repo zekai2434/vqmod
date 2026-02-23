@@ -21,6 +21,7 @@ import RoleSettings from "@/pages/RoleSettings";
 import EmailSettings from "@/pages/EmailSettings";
 import WhatsAppSettings from "@/pages/WhatsAppSettings";
 import PortalUserList from "@/pages/PortalUserList";
+import SystemSettings from "@/pages/SystemSettings";
 // Customer Portal
 import CustomerPortalLogin from "@/pages/CustomerPortalLogin";
 import CustomerPortalLayout from "@/components/CustomerPortalLayout";
