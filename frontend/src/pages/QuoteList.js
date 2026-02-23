@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { 
   Plus, FileText, Search, Building2, Calendar, DollarSign, 
-  Eye, Edit, Trash2, Copy, Send, CheckCircle, XCircle, Clock, AlertTriangle
+  Eye, Edit, Trash2, Copy, Send, CheckCircle, XCircle, Clock, AlertTriangle,
+  Download, FileCheck
 } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
@@ -89,6 +90,62 @@ export default function QuoteList() {
       fetchData();
     } catch (error) {
       toast.error("Güncelleme başarısız");
+    }
+  };
+
+  const handleAcceptQuote = async (quoteId) => {
+    if (!window.confirm("Bu teklifi kabul etmek ve fatura oluşturmak istediğinize emin misiniz?")) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API}/quotes/${quoteId}/accept`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Teklif kabul edildi ve fatura oluşturuldu!");
+      fetchData();
+      // Optionally navigate to invoice
+      if (response.data?.invoice?.id) {
+        navigate(`/invoices/${response.data.invoice.id}`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Teklif kabul edilirken hata oluştu");
+    }
+  };
+
+  const handleRejectQuote = async (quoteId) => {
+    if (!window.confirm("Bu teklifi reddetmek istediğinize emin misiniz?")) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.patch(`${API}/quotes/${quoteId}`, { status: 'rejected' }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Teklif reddedildi");
+      fetchData();
+    } catch (error) {
+      toast.error("İşlem başarısız");
+    }
+  };
+
+  const handleDownloadPDF = async (quoteId, quoteNumber) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/quotes/${quoteId}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Teklif_${quoteNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("PDF indiriliyor...");
+    } catch (error) {
+      toast.error("PDF indirme başarısız");
     }
   };
 
@@ -336,8 +393,18 @@ export default function QuoteList() {
                           size="sm"
                           onClick={() => navigate(`/quotes/${quote.id}`)}
                           data-testid={`view-quote-${quote.id}`}
+                          title="Görüntüle"
                         >
                           <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadPDF(quote.id, quote.quote_number)}
+                          title="PDF İndir"
+                          data-testid={`download-pdf-${quote.id}`}
+                        >
+                          <Download className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="outline"
@@ -352,6 +419,7 @@ export default function QuoteList() {
                           size="sm"
                           className="text-red-500 hover:text-red-700"
                           onClick={() => handleDelete(quote.id)}
+                          title="Sil"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -373,15 +441,20 @@ export default function QuoteList() {
                           <Button
                             size="sm"
                             className="bg-emerald-600 hover:bg-emerald-700"
-                            onClick={() => handleStatusChange(quote.id, 'accepted')}
+                            onClick={() => handleAcceptQuote(quote.id)}
+                            title="Kabul Et ve Fatura Oluştur"
+                            data-testid={`accept-quote-${quote.id}`}
                           >
-                            <CheckCircle className="w-4 h-4" />
+                            <FileCheck className="w-4 h-4 mr-1" />
+                            Kabul Et
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-red-500"
-                            onClick={() => handleStatusChange(quote.id, 'rejected')}
+                            className="text-red-500 hover:text-red-700"
+                            onClick={() => handleRejectQuote(quote.id)}
+                            title="Reddet"
+                            data-testid={`reject-quote-${quote.id}`}
                           >
                             <XCircle className="w-4 h-4" />
                           </Button>
