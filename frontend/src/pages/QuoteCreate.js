@@ -224,14 +224,34 @@ export default function QuoteCreate() {
       {/* Controls */}
       <div className="print:hidden sticky top-0 z-10 bg-white border-b shadow-sm p-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Button variant="outline" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Geri Dön
-          </Button>
-          <Button onClick={handlePrint} disabled={formData.items.length === 0} className="bg-blue-600 hover:bg-blue-700 text-white">
-            <Printer className="w-4 h-4 mr-2" />
-            Yazdır / PDF
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => navigate('/quotes')}>
+              <List className="w-4 h-4 mr-2" />
+              Teklifler
+            </Button>
+            <Button variant="ghost" onClick={() => navigate(-1)}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Geri
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => handleSave("draft")} 
+              disabled={saving}
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {saving ? 'Kaydediliyor...' : 'Taslak Kaydet'}
+            </Button>
+            <Button 
+              onClick={handlePrint} 
+              disabled={formData.items.length === 0} 
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Printer className="w-4 h-4 mr-2" />
+              Yazdır / PDF
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -242,7 +262,7 @@ export default function QuoteCreate() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-gray-900">
                 <FileText className="w-5 h-5 text-blue-600" />
-                Teklif Bilgileri
+                {isEditMode ? 'Teklif Düzenle' : 'Yeni Teklif'}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
