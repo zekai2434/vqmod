@@ -205,6 +205,44 @@ export default function InvoiceList() {
     }
   };
 
+  const handleAddCustomer = async () => {
+    if (!customerForm.name || !customerForm.email) {
+      toast.error("Ad ve e-posta zorunludur");
+      return;
+    }
+
+    setSavingCustomer(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API}/customers`, customerForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const newCustomer = response.data;
+      
+      // Add to customers list and select it
+      setCustomers(prev => [...prev, newCustomer]);
+      setFormData(prev => ({ ...prev, customer_id: newCustomer.id }));
+      
+      toast.success("Müşteri başarıyla eklendi ve seçildi");
+      setCustomerDialogOpen(false);
+      setCustomerForm({
+        name: "",
+        company: "",
+        email: "",
+        phone: "",
+        address: "",
+        tax_number: "",
+        tax_office: ""
+      });
+    } catch (error) {
+      const msg = error.response?.data?.detail || "Müşteri eklenirken hata oluştu";
+      toast.error(msg);
+    } finally {
+      setSavingCustomer(false);
+    }
+  };
+
   const handleDeleteInvoice = async (invoiceId) => {
     if (!confirm("Bu faturayı silmek istediğinizden emin misiniz?")) return;
     
