@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,12 +14,17 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [settings, setSettings] = useState(null);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     full_name: "",
     role: "operator"
   });
+
+  useEffect(() => {
+    axios.get(`${API}/settings/system`).then(res => setSettings(res.data)).catch(() => {});
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,9 +60,13 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="flex items-center gap-3 mb-10">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/25">
-              <Activity className="w-6 h-6 text-white" strokeWidth={2.5} />
-            </div>
+            {settings?.logo_url ? (
+              <img src={settings.logo_url} alt="Logo" className="w-12 h-12 rounded-xl object-contain" />
+            ) : (
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/25">
+                <Activity className="w-6 h-6 text-white" strokeWidth={2.5} />
+              </div>
+            )}
             <div>
               <h1 className="text-2xl font-bold text-white tracking-tight" style={{fontFamily: 'Chivo, sans-serif'}}>
                 NetOps Pro
