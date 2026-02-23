@@ -7,10 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Clock, User, Calendar, AlertCircle, MessageSquare, Paperclip, Send, Upload, Image as ImageIcon, Wrench, MapPin, Monitor, Building2, Plus } from "lucide-react";
+import { ArrowLeft, Clock, User, Calendar, AlertCircle, MessageSquare, Paperclip, Send, Upload, Image as ImageIcon, Wrench, MapPin, Monitor, Building2, Plus, History } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import FileUpload, { ImageViewer } from "@/components/FileUpload";
+import TicketTimeline from "@/components/TicketTimeline";
 import axios from "axios";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
