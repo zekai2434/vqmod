@@ -1704,6 +1704,31 @@ async def update_ticket(ticket_id: str, update: TicketUpdate, current_user: User
     
     return Ticket(**updated_ticket)
 
+@api_router.delete("/tickets/{ticket_id}")
+async def delete_ticket(ticket_id: str, current_user: User = Depends(get_current_user)):
+    """Delete a ticket and all related data"""
+    ticket = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket bulunamadı")
+    
+    # Only admin or the creator can delete
+    if current_user.role != "admin" and ticket.get('created_by') != current_user.id:
+        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok")
+    
+    # Delete related data
+    await db.ticket_comments.delete_many({"ticket_id": ticket_id})
+    await db.ticket_status_history.delete_many({"ticket_id": ticket_id})
+    await db.ticket_assignment_history.delete_many({"ticket_id": ticket_id})
+    await db.sla_pauses.delete_many({"ticket_id": ticket_id})
+    await db.attachments.delete_many({"related_to": "ticket", "related_id": ticket_id})
+    
+    # Delete ticket
+    result = await db.tickets.delete_one({"id": ticket_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Ticket bulunamadı")
+    
+    return {"message": "Ticket ve ilgili veriler silindi"}
+
 @api_router.post("/tickets/{ticket_id}/comments", response_model=TicketComment)
 async def add_ticket_comment(ticket_id: str, comment: TicketCommentCreate, current_user: User = Depends(get_current_user)):
     comment_obj = TicketComment(
