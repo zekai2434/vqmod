@@ -6257,12 +6257,7 @@ async def download_service_report_pdf(ticket_id: str, current_user: User = Depen
 
 @api_router.get("/invoices/{invoice_id}/pdf")
 async def download_invoice_pdf(invoice_id: str, current_user: User = Depends(get_current_user)):
-    """Download invoice as PDF"""
-    try:
-        from weasyprint import HTML
-    except ImportError:
-        raise HTTPException(status_code=500, detail="PDF oluşturma modülü yüklenemedi")
-    
+    """Download invoice as PDF using fpdf2"""
     invoice = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
     if not invoice:
         raise HTTPException(status_code=404, detail="Fatura bulunamadı")
@@ -6275,10 +6270,9 @@ async def download_invoice_pdf(invoice_id: str, current_user: User = Depends(get
     if not settings:
         settings = {}
     
-    html_content = generate_invoice_pdf_html(invoice, customer, settings)
+    pdf_bytes = generate_invoice_pdf(invoice, customer, settings)
     
-    pdf_buffer = io.BytesIO()
-    HTML(string=html_content).write_pdf(pdf_buffer)
+    pdf_buffer = io.BytesIO(pdf_bytes)
     pdf_buffer.seek(0)
     
     filename = f"Fatura_{invoice.get('invoice_number', invoice_id)}.pdf"
