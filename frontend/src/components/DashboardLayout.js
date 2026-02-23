@@ -125,7 +125,7 @@ export default function DashboardLayout() {
             {menuGroups.map((group, idx) => (
               <div key={idx}>
                 {!collapsed && (
-                  <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
+                  <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                     {group.label}
                   </p>
                 )}
@@ -139,10 +139,10 @@ export default function DashboardLayout() {
                       className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-all duration-200 ${
                         isActive(item.path)
                           ? 'bg-gradient-to-r from-blue-600/20 to-transparent text-blue-400 border-l-2 border-blue-500'
-                          : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'
+                          : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
                       }`}
                     >
-                      <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive(item.path) ? 'text-blue-400' : 'text-zinc-500 group-hover:text-zinc-300'}`} strokeWidth={1.5} />
+                      <item.icon className={`w-5 h-5 flex-shrink-0 ${isActive(item.path) ? 'text-blue-400' : 'text-slate-400 group-hover:text-slate-200'}`} strokeWidth={1.5} />
                       {!collapsed && <span className="truncate">{item.label}</span>}
                       {!collapsed && isActive(item.path) && (
                         <ChevronRight className="w-4 h-4 ml-auto text-blue-400" />
@@ -155,17 +155,17 @@ export default function DashboardLayout() {
           </nav>
 
           {/* User & Logout */}
-          <div className="p-3 border-t border-zinc-800/60">
-            <div className={`mb-3 p-3 rounded-lg bg-zinc-900/50 ${collapsed ? 'hidden' : ''}`}>
+          <div className="p-3 border-t border-slate-700/60">
+            <div className={`mb-3 p-3 rounded-lg bg-slate-800/50 ${collapsed ? 'hidden' : ''}`}>
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-sm font-bold">
                   {(JSON.parse(localStorage.getItem('user') || '{}').full_name || 'U').charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-200 truncate">
+                  <p className="text-sm font-medium text-slate-100 truncate">
                     {JSON.parse(localStorage.getItem('user') || '{}').full_name || 'Kullanıcı'}
                   </p>
-                  <p className="text-xs text-zinc-500 truncate">
+                  <p className="text-xs text-slate-400 truncate">
                     {JSON.parse(localStorage.getItem('user') || '{}').email || ''}
                   </p>
                 </div>
@@ -174,7 +174,7 @@ export default function DashboardLayout() {
             <Button
               data-testid="logout-btn"
               variant="ghost"
-              className={`w-full text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 ${collapsed ? 'justify-center px-0' : 'justify-start'}`}
+              className={`w-full text-slate-300 hover:text-rose-400 hover:bg-rose-500/10 ${collapsed ? 'justify-center px-0' : 'justify-start'}`}
               onClick={handleLogout}
             >
               <LogOut className="w-5 h-5" strokeWidth={1.5} />
@@ -187,7 +187,7 @@ export default function DashboardLayout() {
       {/* Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-zinc-950/80 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -195,19 +195,19 @@ export default function DashboardLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-16 border-b border-zinc-800/60 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-30">
+        <header className="h-16 border-b border-slate-700/60 bg-slate-900/80 backdrop-blur-md sticky top-0 z-30">
           <div className="flex items-center justify-between h-full px-6">
             <div className="flex items-center gap-4">
               <button
                 data-testid="open-sidebar-btn"
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 rounded-lg hover:bg-zinc-800 text-zinc-400"
+                className="lg:hidden p-2 rounded-lg hover:bg-slate-700 text-slate-300"
               >
                 <Menu className="w-5 h-5" />
               </button>
               <button
                 onClick={() => setCollapsed(!collapsed)}
-                className="hidden lg:flex p-2 rounded-lg hover:bg-zinc-800 text-zinc-400"
+                className="hidden lg:flex p-2 rounded-lg hover:bg-slate-700 text-slate-300"
               >
                 <Menu className="w-5 h-5" />
               </button>
@@ -222,7 +222,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto custom-scrollbar bg-zinc-950">
+        <main className="flex-1 overflow-y-auto custom-scrollbar bg-slate-900">
           <div className="p-6 md:p-8">
             <Outlet />
           </div>
