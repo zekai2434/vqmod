@@ -454,6 +454,126 @@ export default function NewTicket() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Add Asset Dialog */}
+      <Dialog open={assetDialogOpen} onOpenChange={setAssetDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HardDrive className="w-5 h-5" />
+              Hızlı Cihaz Ekle
+            </DialogTitle>
+            <DialogDescription>
+              Seçili müşteriye yeni cihaz ekleyin. Cihaz eklendikten sonra otomatik seçilecektir.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Seri Numarası *</Label>
+                <Input
+                  value={assetForm.serial_number}
+                  onChange={(e) => setAssetForm({...assetForm, serial_number: e.target.value})}
+                  placeholder="SN-123456"
+                  data-testid="new-asset-serial"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Cihaz Tipi *</Label>
+                <Select 
+                  value={assetForm.device_type} 
+                  onValueChange={(v) => setAssetForm({...assetForm, device_type: v})}
+                >
+                  <SelectTrigger data-testid="new-asset-type">
+                    <SelectValue placeholder="Tip seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Switch">Switch</SelectItem>
+                    <SelectItem value="Router">Router</SelectItem>
+                    <SelectItem value="Access Point">Access Point</SelectItem>
+                    <SelectItem value="Firewall">Firewall</SelectItem>
+                    <SelectItem value="Server">Server</SelectItem>
+                    <SelectItem value="UPS">UPS</SelectItem>
+                    <SelectItem value="Other">Diğer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Marka *</Label>
+                <Input
+                  value={assetForm.brand}
+                  onChange={(e) => setAssetForm({...assetForm, brand: e.target.value})}
+                  placeholder="Cisco, HP, Dell..."
+                  data-testid="new-asset-brand"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Model *</Label>
+                <Input
+                  value={assetForm.model}
+                  onChange={(e) => setAssetForm({...assetForm, model: e.target.value})}
+                  placeholder="Model adı"
+                  data-testid="new-asset-model"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Lokasyon</Label>
+              <Input
+                value={assetForm.location}
+                onChange={(e) => setAssetForm({...assetForm, location: e.target.value})}
+                placeholder="Sunucu odası, Kat 2..."
+                data-testid="new-asset-location"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Satın Alma Tarihi</Label>
+                <Input
+                  type="date"
+                  value={assetForm.purchase_date}
+                  onChange={(e) => setAssetForm({...assetForm, purchase_date: e.target.value})}
+                  data-testid="new-asset-purchase-date"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Garanti Bitiş</Label>
+                <Input
+                  type="date"
+                  value={assetForm.warranty_end}
+                  onChange={(e) => setAssetForm({...assetForm, warranty_end: e.target.value})}
+                  data-testid="new-asset-warranty-end"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-4 border-t">
+              <Button 
+                onClick={handleAddAsset} 
+                disabled={savingAsset}
+                data-testid="save-new-asset-btn"
+              >
+                {savingAsset ? "Ekleniyor..." : "Cihaz Ekle"}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setAssetDialogOpen(false);
+                  setAssetForm(initialAssetForm);
+                }}
+              >
+                İptal
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
