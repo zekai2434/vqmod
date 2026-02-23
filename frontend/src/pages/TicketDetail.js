@@ -426,6 +426,14 @@ export default function TicketDetail() {
         </Button>
         <Button
           variant="outline"
+          onClick={handleDownloadServiceReportPDF}
+          data-testid="download-service-report-pdf-btn"
+        >
+          <Download className="w-4 h-4 mr-2" />
+          Servis Raporu PDF
+        </Button>
+        <Button
+          variant="outline"
           onClick={() => navigate('/quotes/new')}
           data-testid="create-quote-btn"
         >
