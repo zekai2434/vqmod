@@ -5629,6 +5629,403 @@ async def get_invoice_stats(current_user: User = Depends(get_current_user)):
         "collection_rate": round((total_paid / total_invoiced * 100) if total_invoiced > 0 else 0, 2)
     }
 
+# ========== PDF GENERATION ENDPOINTS ==========
+from fastapi.responses import StreamingResponse
+import io
+
+def generate_invoice_pdf_html(invoice: dict, customer: dict, settings: dict) -> str:
+    """Generate HTML for invoice PDF"""
+    items_html = ""
+    for item in invoice.get("items", []):
+        items_html += f"""
+        <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">{item.get('description', '')}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">{item.get('quantity', 1)}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₺{item.get('unit_price', 0):,.2f}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">%{item.get('tax_rate', 20)}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₺{item.get('total', 0):,.2f}</td>
+        </tr>
+        """
+    
+    logo_html = f'<img src="{settings.get("logo_url")}" style="max-height: 60px;" />' if settings.get("logo_url") else f'<h2 style="margin: 0; color: #1e293b;">{settings.get("company_name", "Şirket Adı")}</h2>'
+    
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            @page {{ size: A4; margin: 1cm; }}
+            body {{ font-family: Arial, sans-serif; font-size: 12px; color: #333; }}
+            .header {{ display: flex; justify-content: space-between; margin-bottom: 30px; }}
+            .invoice-title {{ font-size: 28px; font-weight: bold; color: #1e293b; }}
+            table {{ width: 100%; border-collapse: collapse; }}
+            th {{ background: #f1f5f9; padding: 10px; text-align: left; font-weight: 600; }}
+            .totals {{ margin-top: 20px; text-align: right; }}
+            .totals table {{ width: 300px; margin-left: auto; }}
+            .grand-total {{ font-size: 16px; font-weight: bold; background: #1e293b; color: white; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div>{logo_html}<p style="margin: 5px 0; color: #64748b;">{settings.get("company_address", "")}</p></div>
+            <div style="text-align: right;">
+                <div class="invoice-title">FATURA</div>
+                <p style="margin: 5px 0; font-size: 14px;">{invoice.get("invoice_number", "")}</p>
+                <p style="margin: 5px 0; color: #64748b;">Tarih: {invoice.get("created_at", "")[:10]}</p>
+                {f'<p style="margin: 5px 0; color: #64748b;">Vade: {invoice.get("due_date", "")}</p>' if invoice.get("due_date") else ""}
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 30px;">
+            <h3 style="color: #64748b; font-size: 11px; margin-bottom: 5px;">FATURA EDİLEN</h3>
+            <p style="margin: 3px 0; font-weight: bold;">{customer.get("name", "")}</p>
+            <p style="margin: 3px 0;">{customer.get("company", "")}</p>
+            <p style="margin: 3px 0;">{customer.get("address", "")}</p>
+            {f'<p style="margin: 3px 0;">VKN: {customer.get("tax_number", "")} - {customer.get("tax_office", "")}</p>' if customer.get("tax_number") else ""}
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Açıklama</th>
+                    <th style="text-align: center; width: 60px;">Miktar</th>
+                    <th style="text-align: right; width: 100px;">Birim Fiyat</th>
+                    <th style="text-align: center; width: 60px;">KDV</th>
+                    <th style="text-align: right; width: 100px;">Toplam</th>
+                </tr>
+            </thead>
+            <tbody>
+                {items_html}
+            </tbody>
+        </table>
+        
+        <div class="totals">
+            <table>
+                <tr><td style="padding: 5px;">Ara Toplam:</td><td style="padding: 5px; text-align: right;">₺{invoice.get("subtotal", 0):,.2f}</td></tr>
+                <tr><td style="padding: 5px;">KDV:</td><td style="padding: 5px; text-align: right;">₺{invoice.get("tax_total", 0):,.2f}</td></tr>
+                {f'<tr><td style="padding: 5px;">İskonto:</td><td style="padding: 5px; text-align: right; color: #dc2626;">-₺{invoice.get("discount_total", 0):,.2f}</td></tr>' if invoice.get("discount_total", 0) > 0 else ""}
+                <tr class="grand-total"><td style="padding: 10px;">GENEL TOPLAM:</td><td style="padding: 10px; text-align: right;">₺{invoice.get("grand_total", 0):,.2f}</td></tr>
+            </table>
+        </div>
+        
+        {f'<div style="margin-top: 30px; padding: 15px; background: #f8fafc; border-radius: 5px;"><strong>Notlar:</strong><br/>{invoice.get("notes", "")}</div>' if invoice.get("notes") else ""}
+        
+        <div style="margin-top: 40px; text-align: center; color: #94a3b8; font-size: 10px;">
+            <p>Bu fatura elektronik ortamda oluşturulmuştur.</p>
+        </div>
+    </body>
+    </html>
+    """
+
+def generate_quote_pdf_html(quote: dict, customer: dict, settings: dict) -> str:
+    """Generate HTML for quote PDF"""
+    items_html = ""
+    for item in quote.get("items", []):
+        items_html += f"""
+        <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #eee;">{item.get('description', item.get('name', ''))}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">{item.get('quantity', 1)}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₺{item.get('unit_price', item.get('price', 0)):,.2f}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">%{item.get('tax_rate', item.get('vat_rate', 20))}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">₺{item.get('total', item.get('line_total', 0)):,.2f}</td>
+        </tr>
+        """
+    
+    logo_html = f'<img src="{settings.get("logo_url")}" style="max-height: 60px;" />' if settings.get("logo_url") else f'<h2 style="margin: 0; color: #1e293b;">{settings.get("company_name", "Şirket Adı")}</h2>'
+    
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            @page {{ size: A4; margin: 1cm; }}
+            body {{ font-family: Arial, sans-serif; font-size: 12px; color: #333; }}
+            .header {{ display: flex; justify-content: space-between; margin-bottom: 30px; }}
+            .quote-title {{ font-size: 28px; font-weight: bold; color: #0369a1; }}
+            table {{ width: 100%; border-collapse: collapse; }}
+            th {{ background: #e0f2fe; padding: 10px; text-align: left; font-weight: 600; color: #0369a1; }}
+            .totals {{ margin-top: 20px; text-align: right; }}
+            .totals table {{ width: 300px; margin-left: auto; }}
+            .grand-total {{ font-size: 16px; font-weight: bold; background: #0369a1; color: white; }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div>{logo_html}<p style="margin: 5px 0; color: #64748b;">{settings.get("company_address", "")}</p></div>
+            <div style="text-align: right;">
+                <div class="quote-title">TEKLİF</div>
+                <p style="margin: 5px 0; font-size: 14px;">{quote.get("quote_number", "")}</p>
+                <p style="margin: 5px 0; color: #64748b;">Tarih: {quote.get("created_at", "")[:10]}</p>
+                {f'<p style="margin: 5px 0; color: #64748b;">Geçerlilik: {quote.get("valid_until", "")[:10]}</p>' if quote.get("valid_until") else ""}
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 30px;">
+            <h3 style="color: #64748b; font-size: 11px; margin-bottom: 5px;">TEKLİF VERİLEN</h3>
+            <p style="margin: 3px 0; font-weight: bold;">{customer.get("name", "")}</p>
+            <p style="margin: 3px 0;">{customer.get("company", "")}</p>
+            <p style="margin: 3px 0;">{customer.get("address", "")}</p>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Açıklama</th>
+                    <th style="text-align: center; width: 60px;">Miktar</th>
+                    <th style="text-align: right; width: 100px;">Birim Fiyat</th>
+                    <th style="text-align: center; width: 60px;">KDV</th>
+                    <th style="text-align: right; width: 100px;">Toplam</th>
+                </tr>
+            </thead>
+            <tbody>
+                {items_html}
+            </tbody>
+        </table>
+        
+        <div class="totals">
+            <table>
+                <tr><td style="padding: 5px;">Ara Toplam:</td><td style="padding: 5px; text-align: right;">₺{quote.get("subtotal", 0):,.2f}</td></tr>
+                <tr><td style="padding: 5px;">KDV:</td><td style="padding: 5px; text-align: right;">₺{quote.get("total_vat", quote.get("tax_total", 0)):,.2f}</td></tr>
+                <tr class="grand-total"><td style="padding: 10px;">GENEL TOPLAM:</td><td style="padding: 10px; text-align: right;">₺{quote.get("grand_total", 0):,.2f}</td></tr>
+            </table>
+        </div>
+        
+        {f'<div style="margin-top: 30px; padding: 15px; background: #f0f9ff; border-radius: 5px;"><strong>Notlar:</strong><br/>{quote.get("notes", "")}</div>' if quote.get("notes") else ""}
+        {f'<div style="margin-top: 15px; padding: 15px; background: #f8fafc; border-radius: 5px;"><strong>Ödeme Koşulları:</strong><br/>{quote.get("payment_terms", quote.get("terms", ""))}</div>' if quote.get("payment_terms") or quote.get("terms") else ""}
+        
+        <div style="margin-top: 40px; text-align: center; color: #94a3b8; font-size: 10px;">
+            <p>Bu teklif belirtilen geçerlilik süresi boyunca geçerlidir.</p>
+        </div>
+    </body>
+    </html>
+    """
+
+@api_router.get("/invoices/{invoice_id}/pdf")
+async def download_invoice_pdf(invoice_id: str, current_user: User = Depends(get_current_user)):
+    """Download invoice as PDF"""
+    try:
+        from weasyprint import HTML
+    except ImportError:
+        raise HTTPException(status_code=500, detail="PDF oluşturma modülü yüklenemedi")
+    
+    invoice = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Fatura bulunamadı")
+    
+    customer = await db.customers.find_one({"id": invoice["customer_id"]}, {"_id": 0})
+    if not customer:
+        customer = {}
+    
+    settings = await db.system_settings.find_one({"id": "system_settings"}, {"_id": 0})
+    if not settings:
+        settings = {}
+    
+    html_content = generate_invoice_pdf_html(invoice, customer, settings)
+    
+    pdf_buffer = io.BytesIO()
+    HTML(string=html_content).write_pdf(pdf_buffer)
+    pdf_buffer.seek(0)
+    
+    filename = f"Fatura_{invoice.get('invoice_number', invoice_id)}.pdf"
+    
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+@api_router.get("/quotes/{quote_id}/pdf")
+async def download_quote_pdf(quote_id: str, current_user: User = Depends(get_current_user)):
+    """Download quote as PDF"""
+    try:
+        from weasyprint import HTML
+    except ImportError:
+        raise HTTPException(status_code=500, detail="PDF oluşturma modülü yüklenemedi")
+    
+    quote = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+    if not quote:
+        raise HTTPException(status_code=404, detail="Teklif bulunamadı")
+    
+    customer = await db.customers.find_one({"id": quote["customer_id"]}, {"_id": 0})
+    if not customer:
+        customer = {}
+    
+    settings = await db.system_settings.find_one({"id": "system_settings"}, {"_id": 0})
+    if not settings:
+        settings = {}
+    
+    html_content = generate_quote_pdf_html(quote, customer, settings)
+    
+    pdf_buffer = io.BytesIO()
+    HTML(string=html_content).write_pdf(pdf_buffer)
+    pdf_buffer.seek(0)
+    
+    filename = f"Teklif_{quote.get('quote_number', quote_id)}.pdf"
+    
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+# ========== BİZİMHESAP E-FATURA ENTEGRASYONU ==========
+import httpx
+
+class BizimHesapSettings(BaseModel):
+    firm_id: str
+    api_url: str = "https://bizimhesap.com/api/b2b"
+
+@api_router.post("/invoices/{invoice_id}/send-efatura")
+async def send_invoice_to_bizimhesap(invoice_id: str, current_user: User = Depends(get_current_user)):
+    """Send invoice to BizimHesap for e-fatura/e-arşiv"""
+    
+    # Get settings
+    settings = await db.system_settings.find_one({"id": "system_settings"}, {"_id": 0})
+    bizimhesap_firm_id = settings.get("bizimhesap_firm_id") if settings else None
+    
+    if not bizimhesap_firm_id:
+        raise HTTPException(
+            status_code=400, 
+            detail="BizimHesap entegrasyonu için Firm ID gerekli. Sistem ayarlarından 'bizimhesap_firm_id' ekleyin."
+        )
+    
+    # Get invoice
+    invoice = await db.invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Fatura bulunamadı")
+    
+    if invoice.get("status") == "draft":
+        raise HTTPException(status_code=400, detail="Taslak faturalar e-fatura olarak gönderilemez. Önce faturayı onaylayın.")
+    
+    if invoice.get("efatura_sent"):
+        raise HTTPException(status_code=400, detail="Bu fatura zaten e-fatura olarak gönderilmiş.")
+    
+    # Get customer
+    customer = await db.customers.find_one({"id": invoice["customer_id"]}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Müşteri bulunamadı")
+    
+    # Prepare BizimHesap request
+    invoice_date = invoice.get("created_at", "")[:10] if invoice.get("created_at") else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    due_date = invoice.get("due_date", invoice_date)
+    
+    details = []
+    for item in invoice.get("items", []):
+        quantity = float(item.get("quantity", 1))
+        unit_price = float(item.get("unit_price", 0))
+        tax_rate = float(item.get("tax_rate", 20))
+        discount = float(item.get("discount", 0))
+        
+        gross_price = quantity * unit_price
+        discount_amount = gross_price * (discount / 100)
+        net = gross_price - discount_amount
+        tax = net * (tax_rate / 100)
+        total = net + tax
+        
+        details.append({
+            "productId": item.get("id", str(uuid.uuid4())),
+            "productName": item.get("description", "Hizmet"),
+            "taxRate": f"{tax_rate:.2f}",
+            "quantity": quantity,
+            "unitPrice": f"{unit_price:.2f}",
+            "grossPrice": f"{gross_price:.2f}",
+            "discount": f"{discount_amount:.2f}",
+            "net": f"{net:.2f}",
+            "tax": f"{tax:.2f}",
+            "total": f"{total:.2f}"
+        })
+    
+    bizimhesap_data = {
+        "firmId": bizimhesap_firm_id,
+        "invoiceNo": invoice.get("invoice_number", ""),
+        "invoiceType": 3,  # 3 = Satış faturası
+        "note": invoice.get("notes", ""),
+        "dates": {
+            "invoiceDate": f"{invoice_date}T00:00:00.000+03:00",
+            "dueDate": f"{due_date}T00:00:00.000+03:00"
+        },
+        "customer": {
+            "customerId": customer.get("id", ""),
+            "title": customer.get("company") or customer.get("name", ""),
+            "taxOffice": customer.get("tax_office", ""),
+            "taxNo": customer.get("tax_number", ""),
+            "email": customer.get("email", ""),
+            "phone": customer.get("phone", ""),
+            "address": customer.get("address", "")
+        },
+        "amounts": {
+            "currency": "TL",
+            "gross": f"{invoice.get('subtotal', 0):.2f}",
+            "discount": f"{invoice.get('discount_total', 0):.2f}",
+            "net": f"{invoice.get('subtotal', 0) - invoice.get('discount_total', 0):.2f}",
+            "tax": f"{invoice.get('tax_total', 0):.2f}",
+            "total": f"{invoice.get('grand_total', 0):.2f}"
+        },
+        "details": details
+    }
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://bizimhesap.com/api/b2b/addinvoice",
+                json=bizimhesap_data,
+                timeout=30.0
+            )
+            result = response.json()
+        
+        if result.get("error"):
+            raise HTTPException(status_code=400, detail=f"BizimHesap hatası: {result.get('error')}")
+        
+        # Update invoice with e-fatura info
+        await db.invoices.update_one(
+            {"id": invoice_id},
+            {"$set": {
+                "efatura_sent": True,
+                "efatura_guid": result.get("guid"),
+                "efatura_url": result.get("url"),
+                "efatura_sent_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        return {
+            "status": "success",
+            "message": "Fatura başarıyla BizimHesap'a gönderildi",
+            "guid": result.get("guid"),
+            "url": result.get("url")
+        }
+        
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=500, detail=f"BizimHesap bağlantı hatası: {str(e)}")
+
+@api_router.get("/settings/bizimhesap")
+async def get_bizimhesap_settings(current_user: User = Depends(get_current_user)):
+    """Get BizimHesap integration settings"""
+    settings = await db.system_settings.find_one({"id": "system_settings"}, {"_id": 0})
+    return {
+        "firm_id": settings.get("bizimhesap_firm_id") if settings else None,
+        "is_configured": bool(settings.get("bizimhesap_firm_id")) if settings else False
+    }
+
+@api_router.post("/settings/bizimhesap")
+async def update_bizimhesap_settings(firm_id: str, current_user: User = Depends(get_current_user)):
+    """Update BizimHesap integration settings"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Bu işlem için admin yetkisi gerekli")
+    
+    await db.system_settings.update_one(
+        {"id": "system_settings"},
+        {"$set": {
+            "bizimhesap_firm_id": firm_id,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    
+    return {"status": "success", "message": "BizimHesap ayarları güncellendi"}
+
 app.include_router(api_router)
 
 app.add_middleware(
