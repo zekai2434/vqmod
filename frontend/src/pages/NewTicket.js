@@ -228,16 +228,32 @@ export default function NewTicket() {
 
               <div className="space-y-2">
                 <Label htmlFor="asset_id">Cihaz</Label>
-                <Select value={formData.asset_id} onValueChange={(v) => setFormData({...formData, asset_id: v})} disabled={!formData.customer_id}>
-                  <SelectTrigger data-testid="asset-select">
-                    <SelectValue placeholder="Cihaz seçin (opsiyonel)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {assets.map(a => (
-                      <SelectItem key={a.id} value={a.id}>{a.device_type} - {a.serial_number}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select value={formData.asset_id} onValueChange={(v) => setFormData({...formData, asset_id: v})} disabled={!formData.customer_id}>
+                    <SelectTrigger data-testid="asset-select" className="flex-1">
+                      <SelectValue placeholder="Cihaz seçin (opsiyonel)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assets.map(a => (
+                        <SelectItem key={a.id} value={a.id}>{a.device_type} - {a.serial_number}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setAssetDialogOpen(true)}
+                    disabled={!formData.customer_id}
+                    title="Yeni Cihaz Ekle"
+                    data-testid="add-asset-btn"
+                  >
+                    <HardDrive className="w-4 h-4" />
+                  </Button>
+                </div>
+                {!formData.customer_id && (
+                  <p className="text-xs text-muted-foreground">Önce müşteri seçin</p>
+                )}
               </div>
             </div>
 
