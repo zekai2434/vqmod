@@ -3095,6 +3095,90 @@ async def get_users(current_user: User = Depends(get_current_user)):
             u['created_at'] = datetime.fromisoformat(u['created_at'])
     return users
 
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class UserPasswordReset(BaseModel):
+    new_password: str
+
+@api_router.get("/users/{user_id}")
+async def get_user(user_id: str, current_user: User = Depends(get_current_user)):
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "hashed_password": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    if isinstance(user['created_at'], str):
+        user['created_at'] = datetime.fromisoformat(user['created_at'])
+    return user
+
+@api_router.patch("/users/{user_id}")
+async def update_user(user_id: str, update: UserUpdate, current_user: User = Depends(get_current_user)):
+    """Update user - only admin can update other users"""
+    if current_user.role != "admin" and current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok")
+    
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    
+    # Check email uniqueness
+    if "email" in update_data and update_data["email"] != user.get("email"):
+        existing = await db.users.find_one({"email": update_data["email"], "id": {"$ne": user_id}})
+        if existing:
+            raise HTTPException(status_code=400, detail="Bu e-posta adresi zaten kullanımda")
+    
+    # Only admin can change roles
+    if "role" in update_data and current_user.role != "admin":
+        del update_data["role"]
+    
+    if update_data:
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.users.update_one({"id": user_id}, {"$set": update_data})
+    
+    updated = await db.users.find_one({"id": user_id}, {"_id": 0, "hashed_password": 0})
+    return updated
+
+@api_router.post("/users/{user_id}/reset-password")
+async def reset_user_password(user_id: str, data: UserPasswordReset, current_user: User = Depends(get_current_user)):
+    """Reset user password - admin can reset any, users can reset their own"""
+    if current_user.role != "admin" and current_user.id != user_id:
+        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok")
+    
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Şifre en az 6 karakter olmalı")
+    
+    hashed = pwd_context.hash(data.new_password)
+    await db.users.update_one(
+        {"id": user_id}, 
+        {"$set": {"hashed_password": hashed, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"message": "Şifre başarıyla değiştirildi"}
+
+@api_router.delete("/users/{user_id}")
+async def delete_user(user_id: str, current_user: User = Depends(get_current_user)):
+    """Delete user - only admin can delete"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok")
+    
+    # Prevent self-deletion
+    if current_user.id == user_id:
+        raise HTTPException(status_code=400, detail="Kendinizi silemezsiniz")
+    
+    result = await db.users.delete_one({"id": user_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    
+    return {"message": "Kullanıcı silindi"}
+
 # Notification Endpoints
 @api_router.get("/notifications/settings")
 async def get_notification_settings_endpoint(current_user: User = Depends(get_current_user)):
