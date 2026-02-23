@@ -340,7 +340,7 @@ export default function SystemSettings() {
                     <img src={settings.logo_url} alt="Logo" className="max-h-16 object-contain" />
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center p-8 bg-slate-700/50 rounded-lg border-2 border-dashed border-zinc-700">
+                  <div className="flex items-center justify-center p-8 bg-slate-700/50 rounded-lg border-2 border-dashed border-slate-600">
                     <p className="text-slate-400">Logo yüklenmemiş</p>
                   </div>
                 )}
@@ -385,7 +385,7 @@ export default function SystemSettings() {
                     <img src={settings.favicon_url} alt="Favicon" className="w-8 h-8 object-contain" />
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center p-4 bg-slate-700/50 rounded-lg border-2 border-dashed border-zinc-700">
+                  <div className="flex items-center justify-center p-4 bg-slate-700/50 rounded-lg border-2 border-dashed border-slate-600">
                     <p className="text-slate-400">Favicon yüklenmemiş</p>
                   </div>
                 )}
@@ -415,7 +415,7 @@ export default function SystemSettings() {
                       className={`relative p-4 rounded-xl border-2 transition-all ${
                         settings.primary_color === color.value
                           ? "border-white"
-                          : "border-slate-700 hover:border-zinc-700"
+                          : "border-slate-700 hover:border-slate-600"
                       }`}
                       data-testid={`color-${color.value}`}
                     >
@@ -509,7 +509,7 @@ export default function SystemSettings() {
                     <img src={settings.portal_logo_url} alt="Portal Logo" className="max-h-16 object-contain" />
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center p-4 bg-slate-700/50 rounded-lg border-2 border-dashed border-zinc-700">
+                  <div className="flex items-center justify-center p-4 bg-slate-700/50 rounded-lg border-2 border-dashed border-slate-600">
                     <p className="text-slate-400">Ana logo kullanılacak</p>
                   </div>
                 )}

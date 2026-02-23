@@ -184,8 +184,8 @@ export default function LoginPage() {
             backgroundImage: 'url(https://images.unsplash.com/photo-1691435828932-911a7801adfb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHwxfHxuZXR3b3JrJTIwc2VydmVyJTIwcm9vbSUyMGRhcmslMjBibHVlJTIwbGlnaHRzfGVufDB8fHx8MTc3MTgwMjg3OXww&ixlib=rb-4.1.0&q=85)'
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/50 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-transparent to-zinc-950/30" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-slate-900/30" />
         
         {/* Overlay Content */}
         <div className="relative z-10 flex flex-col justify-end p-12">
