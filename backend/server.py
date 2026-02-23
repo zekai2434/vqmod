@@ -3821,6 +3821,42 @@ async def get_asset_history(asset_id: str, current_user: User = Depends(get_curr
     
     return history
 
+@api_router.delete("/assets/{asset_id}")
+async def delete_asset(asset_id: str, current_user: User = Depends(get_current_user)):
+    """Delete an asset and all related data"""
+    # Check if user has admin role
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Bu işlem için admin yetkisi gerekli")
+    
+    asset = await db.assets.find_one({"id": asset_id}, {"_id": 0})
+    if not asset:
+        raise HTTPException(status_code=404, detail="Cihaz bulunamadı")
+    
+    # Check if asset has any open tickets
+    open_tickets = await db.tickets.count_documents({
+        "asset_id": asset_id, 
+        "status": {"$nin": ["resolved", "closed"]}
+    })
+    if open_tickets > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Bu cihaza ait {open_tickets} adet açık ticket bulunuyor. Önce ticketları kapatın."
+        )
+    
+    # Delete asset history
+    await db.asset_history.delete_many({"asset_id": asset_id})
+    
+    # Remove asset_id from closed tickets (don't delete the tickets)
+    await db.tickets.update_many(
+        {"asset_id": asset_id}, 
+        {"$set": {"asset_id": None}}
+    )
+    
+    # Delete the asset
+    await db.assets.delete_one({"id": asset_id})
+    
+    return {"status": "success", "message": "Cihaz başarıyla silindi"}
+
 # ========== CUSTOMER PORTAL ENDPOINTS ==========
 
 async def get_current_portal_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
