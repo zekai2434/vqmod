@@ -20,7 +20,8 @@ import {
   AlertCircle,
   CreditCard,
   Printer,
-  DollarSign
+  DollarSign,
+  UserPlus
 } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
