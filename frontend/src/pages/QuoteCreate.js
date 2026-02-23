@@ -64,12 +64,74 @@ export default function QuoteCreate() {
       setParts(partsRes.data);
       setSettings(settingsRes.data);
       
-      const quoteNum = `TKL-${Date.now().toString().slice(-6)}`;
-      setFormData(prev => ({ ...prev, quote_number: quoteNum }));
+      // If editing existing quote
+      if (quoteId) {
+        const quoteRes = await axios.get(`${API}/quotes/${quoteId}`, { headers });
+        const quote = quoteRes.data;
+        setFormData({
+          customer_id: quote.customer_id,
+          quote_number: quote.quote_number,
+          subject: quote.subject || "",
+          validity_days: quote.validity_days || 30,
+          payment_terms: quote.payment_terms || "pesin",
+          payment_notes: quote.payment_notes || "",
+          notes: quote.notes || "",
+          items: quote.items || []
+        });
+        setIsEditMode(true);
+      } else {
+        const quoteNum = `TKL-${Date.now().toString().slice(-6)}`;
+        setFormData(prev => ({ ...prev, quote_number: quoteNum }));
+      }
     } catch (error) {
       toast.error("Veri yüklenirken hata oluştu");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSave = async (status = "draft") => {
+    if (!formData.customer_id) {
+      toast.error("Lütfen bir müşteri seçin");
+      return;
+    }
+    if (formData.items.length === 0) {
+      toast.error("En az bir ürün/hizmet ekleyin");
+      return;
+    }
+    
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const payload = {
+        customer_id: formData.customer_id,
+        subject: formData.subject,
+        validity_days: formData.validity_days,
+        payment_terms: formData.payment_terms,
+        payment_notes: formData.payment_notes,
+        notes: formData.notes,
+        items: formData.items
+      };
+      
+      if (isEditMode && quoteId) {
+        await axios.patch(`${API}/quotes/${quoteId}`, { ...payload, status }, { headers });
+        toast.success("Teklif güncellendi");
+      } else {
+        const response = await axios.post(`${API}/quotes`, payload, { headers });
+        toast.success("Teklif kaydedildi");
+        navigate(`/quotes/${response.data.id}`);
+        return;
+      }
+      
+      if (status !== "draft") {
+        navigate('/quotes');
+      }
+    } catch (error) {
+      toast.error("Kaydetme başarısız");
+    } finally {
+      setSaving(false);
     }
   };
 
