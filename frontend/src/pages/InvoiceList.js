@@ -529,15 +529,34 @@ export default function InvoiceList() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Müşteri *</Label>
-                <Select 
-                  value={formData.customer_id} 
-                  onValueChange={(v) => setFormData({...formData, customer_id: v})}
-                >
-                  <SelectTrigger data-testid="invoice-customer-select">
-                    <SelectValue placeholder="Müşteri seçin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers.map(c => (
+                <div className="flex gap-2">
+                  <Select 
+                    value={formData.customer_id} 
+                    onValueChange={(v) => setFormData({...formData, customer_id: v})}
+                  >
+                    <SelectTrigger data-testid="invoice-customer-select" className="flex-1">
+                      <SelectValue placeholder="Müşteri seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customers.map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name} {c.company && `- ${c.company}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCustomerDialogOpen(true)}
+                    title="Yeni Müşteri Ekle"
+                    data-testid="invoice-add-customer-btn"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
                       <SelectItem key={c.id} value={c.id}>
                         {c.name} {c.company && `- ${c.company}`}
                       </SelectItem>
