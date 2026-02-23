@@ -2773,6 +2773,102 @@ async def duplicate_quote(quote_id: str, current_user: User = Depends(get_curren
     new_quote.pop('_id', None)
     return new_quote
 
+@api_router.post("/quotes/{quote_id}/accept")
+async def accept_quote_and_create_invoice(quote_id: str, current_user: User = Depends(get_current_user)):
+    """Accept a quote and automatically create an invoice from it"""
+    quote = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+    if not quote:
+        raise HTTPException(status_code=404, detail="Teklif bulunamadı")
+    
+    if quote.get("status") == "accepted":
+        raise HTTPException(status_code=400, detail="Bu teklif zaten kabul edilmiş")
+    
+    # Update quote status to accepted
+    await db.quotes.update_one(
+        {"id": quote_id},
+        {"$set": {
+            "status": "accepted",
+            "accepted_at": datetime.now(timezone.utc).isoformat(),
+            "accepted_by": current_user.id,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Generate invoice number
+    invoice_number = await generate_invoice_number()
+    
+    # Convert quote items to invoice items
+    invoice_items = []
+    for item in quote.get("items", []):
+        invoice_item = {
+            "id": str(uuid.uuid4()),
+            "description": item.get("description", item.get("name", "")),
+            "quantity": item.get("quantity", 1),
+            "unit_price": item.get("unit_price", item.get("price", 0)),
+            "tax_rate": item.get("tax_rate", item.get("vat_rate", 20)),
+            "discount": item.get("discount", 0),
+            "total": item.get("total", item.get("line_total", 0))
+        }
+        invoice_items.append(invoice_item)
+    
+    # Calculate invoice totals
+    totals = calculate_invoice_totals(invoice_items)
+    
+    # Create invoice from quote
+    invoice = {
+        "id": str(uuid.uuid4()),
+        "invoice_number": invoice_number,
+        "customer_id": quote["customer_id"],
+        "quote_id": quote_id,
+        "status": "draft",
+        "items": invoice_items,
+        "subtotal": totals["subtotal"],
+        "tax_total": totals["tax_total"],
+        "discount_total": totals["discount_total"],
+        "grand_total": totals["grand_total"],
+        "paid_amount": 0,
+        "due_date": (datetime.now(timezone.utc) + timedelta(days=30)).strftime("%Y-%m-%d"),
+        "notes": f"Teklif No: {quote.get('quote_number', '')} üzerinden oluşturuldu.",
+        "created_by": current_user.id,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.invoices.insert_one(invoice)
+    
+    # Update quote with invoice reference
+    await db.quotes.update_one(
+        {"id": quote_id},
+        {"$set": {"invoice_id": invoice["id"]}}
+    )
+    
+    invoice.pop("_id", None)
+    return {
+        "message": "Teklif kabul edildi ve fatura oluşturuldu",
+        "quote_id": quote_id,
+        "invoice": invoice
+    }
+
+@api_router.post("/quotes/{quote_id}/reject")
+async def reject_quote(quote_id: str, reason: Optional[str] = None, current_user: User = Depends(get_current_user)):
+    """Reject a quote"""
+    quote = await db.quotes.find_one({"id": quote_id}, {"_id": 0})
+    if not quote:
+        raise HTTPException(status_code=404, detail="Teklif bulunamadı")
+    
+    await db.quotes.update_one(
+        {"id": quote_id},
+        {"$set": {
+            "status": "rejected",
+            "rejected_at": datetime.now(timezone.utc).isoformat(),
+            "rejected_by": current_user.id,
+            "rejection_reason": reason,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Teklif reddedildi", "quote_id": quote_id}
+
 @api_router.get("/reports/dashboard")
 async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
     total_tickets = await db.tickets.count_documents({})
