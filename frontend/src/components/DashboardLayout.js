@@ -1,14 +1,36 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Ticket, Users, Package, HardDrive, Wrench, FileText, Settings, LogOut, Menu, X, Bell, Clock, Shield, Mail, MessageCircle, UserCircle, ChevronRight, Activity } from "lucide-react";
-import { useState } from "react";
+import { LayoutDashboard, Ticket, Users, Package, HardDrive, Wrench, FileText, Settings, LogOut, Menu, X, Bell, Clock, Shield, Mail, MessageCircle, UserCircle, ChevronRight, Activity, Cog } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import axios from "axios";
+
+const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [systemSettings, setSystemSettings] = useState(null);
+
+  useEffect(() => {
+    fetchSettings();
+    
+    // Listen for settings updates
+    const handleSettingsUpdate = () => fetchSettings();
+    window.addEventListener('settings-updated', handleSettingsUpdate);
+    return () => window.removeEventListener('settings-updated', handleSettingsUpdate);
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const response = await axios.get(`${API}/api/settings/system`);
+      setSystemSettings(response.data);
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+    }
+  };
 
   const menuGroups = [
     {
@@ -44,6 +66,7 @@ export default function DashboardLayout() {
         { path: "/sla-settings", icon: Clock, label: "SLA Yönetimi" },
         { path: "/roles", icon: Shield, label: "Roller" },
         { path: "/users", icon: Settings, label: "Kullanıcılar" },
+        { path: "/settings", icon: Cog, label: "Sistem Ayarları" },
       ]
     }
   ];
