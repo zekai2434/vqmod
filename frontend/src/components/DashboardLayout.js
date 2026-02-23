@@ -84,19 +84,19 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-zinc-950">
+    <div className="flex h-screen bg-slate-900">
       {/* Sidebar */}
-      <aside className={`fixed lg:static inset-y-0 left-0 z-50 bg-zinc-950/95 border-r border-zinc-800/60 transform transition-all duration-300 lg:translate-x-0 ${
+      <aside className={`fixed lg:static inset-y-0 left-0 z-50 bg-slate-900 border-r border-slate-700/50 transform transition-all duration-300 lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } ${collapsed ? 'w-20' : 'w-64'}`}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between h-16 px-4 border-b border-zinc-800/60">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-slate-700/50">
             <Link to="/" className="flex items-center gap-3">
               {systemSettings?.logo_url ? (
                 <img src={systemSettings.logo_url} alt="Logo" className="w-10 h-10 rounded-xl object-contain" />
               ) : (
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/30">
                   <Activity className="w-5 h-5 text-white" strokeWidth={2.5} />
                 </div>
               )}
@@ -105,7 +105,7 @@ export default function DashboardLayout() {
                   <h1 className="text-lg font-bold text-white tracking-tight" style={{fontFamily: 'Chivo, sans-serif'}}>
                     {systemSettings?.company_name?.split(' ')[0] || 'NetOps'}
                   </h1>
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider">
                     {systemSettings?.company_name?.split(' ').slice(1).join(' ') || systemSettings?.company_slogan || 'Pro'}
                   </p>
                 </div>
@@ -114,9 +114,9 @@ export default function DashboardLayout() {
             <button
               data-testid="close-sidebar-btn"
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-1 rounded hover:bg-zinc-800"
+              className="lg:hidden p-1 rounded hover:bg-slate-800"
             >
-              <X className="w-5 h-5 text-zinc-400" />
+              <X className="w-5 h-5 text-slate-400" />
             </button>
           </div>
           
