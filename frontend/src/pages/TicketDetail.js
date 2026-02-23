@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Clock, User, Calendar, AlertCircle, MessageSquare, Paperclip, Send, Upload, Image as ImageIcon, Wrench, MapPin, Monitor, Building2, Plus, History } from "lucide-react";
+import { ArrowLeft, Clock, User, Calendar, AlertCircle, MessageSquare, Paperclip, Send, Upload, Image as ImageIcon, Wrench, MapPin, Monitor, Building2, Plus, History, Pencil, HardDrive } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import FileUpload, { ImageViewer } from "@/components/FileUpload";
@@ -38,7 +38,9 @@ export default function TicketDetail() {
   const [uploading, setUploading] = useState(false);
   const [viewerImages, setViewerImages] = useState(null);
   const [users, setUsers] = useState([]);
+  const [assets, setAssets] = useState([]);
   const [createWODialogOpen, setCreateWODialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [woFormData, setWoFormData] = useState({
     work_type: "onsite",
     assigned_technician: "",
@@ -46,7 +48,17 @@ export default function TicketDetail() {
     scheduled_time: "",
     notes: ""
   });
+  const [editFormData, setEditFormData] = useState({
+    title: "",
+    description: "",
+    category: "",
+    subcategory: "",
+    priority: "",
+    asset_id: "",
+    assigned_to: ""
+  });
   const [creatingWO, setCreatingWO] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     fetchTicketDetails();
