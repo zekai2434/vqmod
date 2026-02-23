@@ -2579,6 +2579,8 @@ async def duplicate_quote(quote_id: str, current_user: User = Depends(get_curren
     }
     
     await db.quotes.insert_one(new_quote)
+    # Remove MongoDB _id before returning
+    new_quote.pop('_id', None)
     return new_quote
 
 @api_router.get("/reports/dashboard")
