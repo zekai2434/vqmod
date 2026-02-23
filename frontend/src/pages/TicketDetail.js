@@ -385,7 +385,15 @@ export default function TicketDetail() {
       </Button>
 
       {/* Quick Actions */}
-      <div className="flex items-center gap-2 mb-6 print:hidden">
+      <div className="flex items-center gap-2 mb-6 print:hidden flex-wrap">
+        <Button
+          variant="default"
+          onClick={openEditDialog}
+          data-testid="edit-ticket-btn"
+        >
+          <Pencil className="w-4 h-4 mr-2" />
+          Ticket Düzenle
+        </Button>
         <Button
           variant="outline"
           onClick={() => navigate(`/service-report/${id}`)}
