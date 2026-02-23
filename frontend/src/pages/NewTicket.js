@@ -54,6 +54,11 @@ export default function NewTicket() {
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
   const [customerForm, setCustomerForm] = useState(initialCustomerForm);
   const [savingCustomer, setSavingCustomer] = useState(false);
+  
+  // New asset dialog state
+  const [assetDialogOpen, setAssetDialogOpen] = useState(false);
+  const [assetForm, setAssetForm] = useState(initialAssetForm);
+  const [savingAsset, setSavingAsset] = useState(false);
 
   useEffect(() => {
     fetchData();
