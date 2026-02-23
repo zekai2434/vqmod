@@ -145,7 +145,7 @@ export default function SystemSettings() {
           <h1 className="text-3xl font-bold text-white tracking-tight" style={{fontFamily: 'Chivo, sans-serif'}}>
             Sistem Ayarları
           </h1>
-          <p className="text-zinc-400">Şirket bilgileri, logo ve tema ayarları</p>
+          <p className="text-slate-300">Şirket bilgileri, logo ve tema ayarları</p>
         </div>
         <Button 
           onClick={handleSave} 
@@ -168,20 +168,20 @@ export default function SystemSettings() {
       </div>
 
       <Tabs defaultValue="company" className="space-y-6">
-        <TabsList className="bg-zinc-900/50 border border-zinc-800">
-          <TabsTrigger value="company" className="data-[state=active]:bg-zinc-800">
+        <TabsList className="bg-slate-800/50 border border-slate-700">
+          <TabsTrigger value="company" className="data-[state=active]:bg-slate-700">
             <Building2 className="w-4 h-4 mr-2" />
             Şirket Bilgileri
           </TabsTrigger>
-          <TabsTrigger value="branding" className="data-[state=active]:bg-zinc-800">
+          <TabsTrigger value="branding" className="data-[state=active]:bg-slate-700">
             <Image className="w-4 h-4 mr-2" />
             Logo & Marka
           </TabsTrigger>
-          <TabsTrigger value="theme" className="data-[state=active]:bg-zinc-800">
+          <TabsTrigger value="theme" className="data-[state=active]:bg-slate-700">
             <Palette className="w-4 h-4 mr-2" />
             Tema
           </TabsTrigger>
-          <TabsTrigger value="portal" className="data-[state=active]:bg-zinc-800">
+          <TabsTrigger value="portal" className="data-[state=active]:bg-slate-700">
             <Globe className="w-4 h-4 mr-2" />
             Portal Ayarları
           </TabsTrigger>
@@ -200,22 +200,22 @@ export default function SystemSettings() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label className="text-zinc-300">Şirket Adı</Label>
+                  <Label className="text-slate-200">Şirket Adı</Label>
                   <Input
                     value={settings.company_name}
                     onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
                     placeholder="Şirket adınız"
-                    className="bg-zinc-900 border-zinc-800 text-white"
+                    className="bg-slate-800 border-slate-700 text-white"
                     data-testid="company-name-input"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-zinc-300">Slogan</Label>
+                  <Label className="text-slate-200">Slogan</Label>
                   <Input
                     value={settings.company_slogan}
                     onChange={(e) => setSettings({ ...settings, company_slogan: e.target.value })}
                     placeholder="Şirket sloganı"
-                    className="bg-zinc-900 border-zinc-800 text-white"
+                    className="bg-slate-800 border-slate-700 text-white"
                     data-testid="company-slogan-input"
                   />
                 </div>
@@ -223,19 +223,19 @@ export default function SystemSettings() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label className="text-zinc-300 flex items-center gap-2">
+                  <Label className="text-slate-200 flex items-center gap-2">
                     <Phone className="w-4 h-4" /> Telefon
                   </Label>
                   <Input
                     value={settings.company_phone || ""}
                     onChange={(e) => setSettings({ ...settings, company_phone: e.target.value })}
                     placeholder="0850 XXX XX XX"
-                    className="bg-zinc-900 border-zinc-800 text-white"
+                    className="bg-slate-800 border-slate-700 text-white"
                     data-testid="company-phone-input"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-zinc-300 flex items-center gap-2">
+                  <Label className="text-slate-200 flex items-center gap-2">
                     <Mail className="w-4 h-4" /> E-posta
                   </Label>
                   <Input
@@ -243,27 +243,27 @@ export default function SystemSettings() {
                     value={settings.company_email || ""}
                     onChange={(e) => setSettings({ ...settings, company_email: e.target.value })}
                     placeholder="info@sirket.com"
-                    className="bg-zinc-900 border-zinc-800 text-white"
+                    className="bg-slate-800 border-slate-700 text-white"
                     data-testid="company-email-input"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-zinc-300 flex items-center gap-2">
+                <Label className="text-slate-200 flex items-center gap-2">
                   <LinkIcon className="w-4 h-4" /> Website
                 </Label>
                 <Input
                   value={settings.company_website || ""}
                   onChange={(e) => setSettings({ ...settings, company_website: e.target.value })}
                   placeholder="https://www.sirket.com"
-                  className="bg-zinc-900 border-zinc-800 text-white"
+                  className="bg-slate-800 border-slate-700 text-white"
                   data-testid="company-website-input"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-zinc-300 flex items-center gap-2">
+                <Label className="text-slate-200 flex items-center gap-2">
                   <MapPin className="w-4 h-4" /> Adres
                 </Label>
                 <Textarea
@@ -271,18 +271,18 @@ export default function SystemSettings() {
                   onChange={(e) => setSettings({ ...settings, company_address: e.target.value })}
                   placeholder="Şirket adresi"
                   rows={3}
-                  className="bg-zinc-900 border-zinc-800 text-white"
+                  className="bg-slate-800 border-slate-700 text-white"
                   data-testid="company-address-input"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-zinc-300">Footer Metni</Label>
+                <Label className="text-slate-200">Footer Metni</Label>
                 <Input
                   value={settings.footer_text || ""}
                   onChange={(e) => setSettings({ ...settings, footer_text: e.target.value })}
                   placeholder="© 2025 Şirket Adı. Tüm hakları saklıdır."
-                  className="bg-zinc-900 border-zinc-800 text-white"
+                  className="bg-slate-800 border-slate-700 text-white"
                   data-testid="footer-text-input"
                 />
               </div>
@@ -302,11 +302,11 @@ export default function SystemSettings() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Main Logo */}
-              <div className="p-6 rounded-xl bg-zinc-900/50 border border-zinc-800 space-y-4">
+              <div className="p-6 rounded-xl bg-slate-800/50 border border-slate-700 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium text-white">Ana Logo</h3>
-                    <p className="text-sm text-zinc-500">Sidebar ve login sayfasında görünür</p>
+                    <p className="text-sm text-slate-400">Sidebar ve login sayfasında görünür</p>
                   </div>
                   <div className="flex gap-2">
                     <input
@@ -336,22 +336,22 @@ export default function SystemSettings() {
                   </div>
                 </div>
                 {settings.logo_url ? (
-                  <div className="flex items-center justify-center p-4 bg-zinc-800 rounded-lg">
+                  <div className="flex items-center justify-center p-4 bg-slate-700 rounded-lg">
                     <img src={settings.logo_url} alt="Logo" className="max-h-16 object-contain" />
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center p-8 bg-zinc-800/50 rounded-lg border-2 border-dashed border-zinc-700">
-                    <p className="text-zinc-500">Logo yüklenmemiş</p>
+                  <div className="flex items-center justify-center p-8 bg-slate-700/50 rounded-lg border-2 border-dashed border-zinc-700">
+                    <p className="text-slate-400">Logo yüklenmemiş</p>
                   </div>
                 )}
               </div>
 
               {/* Favicon */}
-              <div className="p-6 rounded-xl bg-zinc-900/50 border border-zinc-800 space-y-4">
+              <div className="p-6 rounded-xl bg-slate-800/50 border border-slate-700 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium text-white">Favicon</h3>
-                    <p className="text-sm text-zinc-500">Tarayıcı sekmesinde görünür (32x32 önerilir)</p>
+                    <p className="text-sm text-slate-400">Tarayıcı sekmesinde görünür (32x32 önerilir)</p>
                   </div>
                   <div className="flex gap-2">
                     <input
@@ -381,12 +381,12 @@ export default function SystemSettings() {
                   </div>
                 </div>
                 {settings.favicon_url ? (
-                  <div className="flex items-center justify-center p-4 bg-zinc-800 rounded-lg">
+                  <div className="flex items-center justify-center p-4 bg-slate-700 rounded-lg">
                     <img src={settings.favicon_url} alt="Favicon" className="w-8 h-8 object-contain" />
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center p-4 bg-zinc-800/50 rounded-lg border-2 border-dashed border-zinc-700">
-                    <p className="text-zinc-500">Favicon yüklenmemiş</p>
+                  <div className="flex items-center justify-center p-4 bg-slate-700/50 rounded-lg border-2 border-dashed border-zinc-700">
+                    <p className="text-slate-400">Favicon yüklenmemiş</p>
                   </div>
                 )}
               </div>
@@ -406,7 +406,7 @@ export default function SystemSettings() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <Label className="text-zinc-300">Ana Renk</Label>
+                <Label className="text-slate-200">Ana Renk</Label>
                 <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
                   {colorOptions.map((color) => (
                     <button
@@ -415,12 +415,12 @@ export default function SystemSettings() {
                       className={`relative p-4 rounded-xl border-2 transition-all ${
                         settings.primary_color === color.value
                           ? "border-white"
-                          : "border-zinc-800 hover:border-zinc-700"
+                          : "border-slate-700 hover:border-zinc-700"
                       }`}
                       data-testid={`color-${color.value}`}
                     >
                       <div className={`w-full h-12 rounded-lg ${color.class}`}></div>
-                      <p className="text-sm text-zinc-400 mt-2 text-center">{color.label}</p>
+                      <p className="text-sm text-slate-300 mt-2 text-center">{color.label}</p>
                       {settings.primary_color === color.value && (
                         <div className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full flex items-center justify-center">
                           <CheckCircle className="w-4 h-4 text-zinc-900" />
@@ -447,35 +447,35 @@ export default function SystemSettings() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label className="text-zinc-300">Portal Başlığı</Label>
+                  <Label className="text-slate-200">Portal Başlığı</Label>
                   <Input
                     value={settings.portal_title}
                     onChange={(e) => setSettings({ ...settings, portal_title: e.target.value })}
                     placeholder="Müşteri Portalı"
-                    className="bg-zinc-900 border-zinc-800 text-white"
+                    className="bg-slate-800 border-slate-700 text-white"
                     data-testid="portal-title-input"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-zinc-300">Karşılama Mesajı</Label>
+                <Label className="text-slate-200">Karşılama Mesajı</Label>
                 <Textarea
                   value={settings.portal_welcome_message}
                   onChange={(e) => setSettings({ ...settings, portal_welcome_message: e.target.value })}
                   placeholder="Destek taleplerinizi takip edin ve yönetin"
                   rows={2}
-                  className="bg-zinc-900 border-zinc-800 text-white"
+                  className="bg-slate-800 border-slate-700 text-white"
                   data-testid="portal-welcome-input"
                 />
               </div>
 
               {/* Portal Logo */}
-              <div className="p-6 rounded-xl bg-zinc-900/50 border border-zinc-800 space-y-4">
+              <div className="p-6 rounded-xl bg-slate-800/50 border border-slate-700 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium text-white">Portal Logosu</h3>
-                    <p className="text-sm text-zinc-500">Müşteri portalında görünür (opsiyonel)</p>
+                    <p className="text-sm text-slate-400">Müşteri portalında görünür (opsiyonel)</p>
                   </div>
                   <div className="flex gap-2">
                     <input
@@ -505,12 +505,12 @@ export default function SystemSettings() {
                   </div>
                 </div>
                 {settings.portal_logo_url ? (
-                  <div className="flex items-center justify-center p-4 bg-zinc-800 rounded-lg">
+                  <div className="flex items-center justify-center p-4 bg-slate-700 rounded-lg">
                     <img src={settings.portal_logo_url} alt="Portal Logo" className="max-h-16 object-contain" />
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center p-4 bg-zinc-800/50 rounded-lg border-2 border-dashed border-zinc-700">
-                    <p className="text-zinc-500">Ana logo kullanılacak</p>
+                  <div className="flex items-center justify-center p-4 bg-slate-700/50 rounded-lg border-2 border-dashed border-zinc-700">
+                    <p className="text-slate-400">Ana logo kullanılacak</p>
                   </div>
                 )}
               </div>

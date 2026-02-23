@@ -49,7 +49,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-zinc-950">
+    <div className="min-h-screen flex bg-slate-900">
       {/* Left Side - Form */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
@@ -62,7 +62,7 @@ export default function LoginPage() {
               <h1 className="text-2xl font-bold text-white tracking-tight" style={{fontFamily: 'Chivo, sans-serif'}}>
                 NetOps Pro
               </h1>
-              <p className="text-xs text-zinc-500 uppercase tracking-wider">Teknik Servis Yönetimi</p>
+              <p className="text-xs text-slate-400 uppercase tracking-wider">Teknik Servis Yönetimi</p>
             </div>
           </div>
 
@@ -72,7 +72,7 @@ export default function LoginPage() {
               <h2 className="text-2xl font-bold text-white mb-2">
                 {isLogin ? "Hoş Geldiniz" : "Hesap Oluştur"}
               </h2>
-              <p className="text-zinc-400">
+              <p className="text-slate-300">
                 {isLogin ? "Devam etmek için giriş yapın" : "Yeni bir hesap oluşturun"}
               </p>
             </div>
@@ -80,14 +80,14 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-5">
               {!isLogin && (
                 <div className="space-y-2">
-                  <Label htmlFor="full_name" className="text-zinc-300 text-sm font-medium">Ad Soyad</Label>
+                  <Label htmlFor="full_name" className="text-slate-200 text-sm font-medium">Ad Soyad</Label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <Input
                       id="full_name"
                       data-testid="fullname-input"
                       type="text"
-                      className="pl-11 h-12 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20"
+                      className="pl-11 h-12 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20"
                       placeholder="Adınız Soyadınız"
                       value={formData.full_name}
                       onChange={(e) => setFormData({...formData, full_name: e.target.value})}
@@ -98,14 +98,14 @@ export default function LoginPage() {
               )}
               
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-zinc-300 text-sm font-medium">E-posta</Label>
+                <Label htmlFor="email" className="text-slate-200 text-sm font-medium">E-posta</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <Input
                     id="email"
                     data-testid="email-input"
                     type="email"
-                    className="pl-11 h-12 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20"
+                    className="pl-11 h-12 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20"
                     placeholder="ornek@firma.com"
                     value={formData.email}
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
@@ -115,14 +115,14 @@ export default function LoginPage() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-zinc-300 text-sm font-medium">Şifre</Label>
+                <Label htmlFor="password" className="text-slate-200 text-sm font-medium">Şifre</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <Input
                     id="password"
                     data-testid="password-input"
                     type="password"
-                    className="pl-11 h-12 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20"
+                    className="pl-11 h-12 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20"
                     placeholder="••••••••"
                     value={formData.password}
                     onChange={(e) => setFormData({...formData, password: e.target.value})}
@@ -155,7 +155,7 @@ export default function LoginPage() {
                   data-testid="toggle-mode-btn"
                   type="button"
                   onClick={() => setIsLogin(!isLogin)}
-                  className="text-zinc-400 hover:text-blue-400 text-sm transition-colors"
+                  className="text-slate-300 hover:text-blue-400 text-sm transition-colors"
                 >
                   {isLogin ? "Hesabınız yok mu? Kayıt olun" : "Zaten hesabınız var mı? Giriş yapın"}
                 </button>
@@ -163,10 +163,10 @@ export default function LoginPage() {
             </form>
 
             {/* Portal Link */}
-            <div className="mt-8 pt-6 border-t border-zinc-800">
+            <div className="mt-8 pt-6 border-t border-slate-700">
               <Link 
                 to="/portal/login" 
-                className="flex items-center justify-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="flex items-center justify-center gap-2 text-sm text-slate-400 hover:text-slate-200 transition-colors"
               >
                 <span>Müşteri Portalı için tıklayın</span>
                 <ArrowRight className="w-4 h-4" />
@@ -197,24 +197,24 @@ export default function LoginPage() {
             <h2 className="text-3xl font-bold text-white mb-4" style={{fontFamily: 'Chivo, sans-serif'}}>
               Network Operasyonlarınızı Kontrol Altına Alın
             </h2>
-            <p className="text-zinc-400 leading-relaxed">
+            <p className="text-slate-300 leading-relaxed">
               Ticket yönetimi, SLA takibi, iş emirleri ve müşteri portalı ile teknik servis süreçlerinizi 
               tek bir platformdan yönetin.
             </p>
             
             {/* Stats */}
-            <div className="flex gap-8 mt-8 pt-8 border-t border-zinc-800">
+            <div className="flex gap-8 mt-8 pt-8 border-t border-slate-700">
               <div>
                 <p className="text-3xl font-bold text-white">%99.9</p>
-                <p className="text-xs text-zinc-500 uppercase tracking-wider">Uptime</p>
+                <p className="text-xs text-slate-400 uppercase tracking-wider">Uptime</p>
               </div>
               <div>
                 <p className="text-3xl font-bold text-white">24/7</p>
-                <p className="text-xs text-zinc-500 uppercase tracking-wider">Destek</p>
+                <p className="text-xs text-slate-400 uppercase tracking-wider">Destek</p>
               </div>
               <div>
                 <p className="text-3xl font-bold text-white">500+</p>
-                <p className="text-xs text-zinc-500 uppercase tracking-wider">Müşteri</p>
+                <p className="text-xs text-slate-400 uppercase tracking-wider">Müşteri</p>
               </div>
             </div>
           </div>
