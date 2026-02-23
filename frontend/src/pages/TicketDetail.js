@@ -314,6 +314,26 @@ export default function TicketDetail() {
         Ticketlara Dön
       </Button>
 
+      {/* Quick Actions */}
+      <div className="flex items-center gap-2 mb-6 print:hidden">
+        <Button
+          variant="outline"
+          onClick={() => navigate(`/service-report/${id}`)}
+          data-testid="print-service-report-btn"
+        >
+          <Wrench className="w-4 h-4 mr-2" />
+          Servis Raporu Yazdır
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => navigate('/quotes/new')}
+          data-testid="create-quote-btn"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Teklif Oluştur
+        </Button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Card>
