@@ -531,6 +531,171 @@ export default function SystemSettings() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Integrations Tab */}
+        <TabsContent value="integrations">
+          <div className="space-y-6">
+            {/* BizimHesap E-Fatura */}
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <FileText className="w-5 h-5 text-blue-400" />
+                  BizimHesap E-Fatura
+                </CardTitle>
+                <CardDescription>
+                  E-fatura ve e-arşiv entegrasyonu için BizimHesap ayarları
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-blue-400 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="text-blue-300 font-medium">BizimHesap hesabı gereklidir</p>
+                      <p className="text-slate-400 mt-1">
+                        E-fatura göndermek için BizimHesap'tan Firm ID almanız gerekmektedir.
+                      </p>
+                      <a 
+                        href="https://www.bizimhesap.com" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 mt-2"
+                      >
+                        BizimHesap'a Git <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-slate-200 flex items-center gap-2">
+                    <Key className="w-4 h-4" /> Firm ID
+                  </Label>
+                  <Input
+                    value={settings.bizimhesap_firm_id || ""}
+                    onChange={(e) => setSettings({ ...settings, bizimhesap_firm_id: e.target.value })}
+                    placeholder="BizimHesap Firm ID giriniz"
+                    className="bg-slate-800 border-slate-700 text-white font-mono"
+                    data-testid="bizimhesap-firm-id-input"
+                  />
+                  <p className="text-xs text-slate-500">
+                    BizimHesap panelinden "Firma Ayarları" bölümünden Firm ID'nizi bulabilirsiniz
+                  </p>
+                </div>
+
+                {settings.bizimhesap_firm_id && (
+                  <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                    <span className="text-emerald-300 text-sm">BizimHesap entegrasyonu yapılandırıldı</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* iyzico Payment */}
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <CreditCard className="w-5 h-5 text-purple-400" />
+                  iyzico Ödeme Entegrasyonu
+                </CardTitle>
+                <CardDescription>
+                  Online ödeme almak için iyzico API ayarları
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-purple-400 mt-0.5" />
+                    <div className="text-sm">
+                      <p className="text-purple-300 font-medium">iyzico üyeliği gereklidir</p>
+                      <p className="text-slate-400 mt-1">
+                        Online ödeme almak için iyzico hesabı oluşturup API anahtarlarınızı almanız gerekmektedir.
+                      </p>
+                      <a 
+                        href="https://www.iyzico.com" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-purple-400 hover:text-purple-300 mt-2"
+                      >
+                        iyzico'ya Git <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-slate-200">Ortam</Label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="iyzico_env"
+                          value="sandbox"
+                          checked={settings.iyzico_base_url === "sandbox"}
+                          onChange={() => setSettings({ ...settings, iyzico_base_url: "sandbox" })}
+                          className="w-4 h-4 text-purple-500"
+                        />
+                        <span className="text-slate-300">Test (Sandbox)</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="iyzico_env"
+                          value="production"
+                          checked={settings.iyzico_base_url === "production"}
+                          onChange={() => setSettings({ ...settings, iyzico_base_url: "production" })}
+                          className="w-4 h-4 text-purple-500"
+                        />
+                        <span className="text-slate-300">Canlı (Production)</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-slate-200 flex items-center gap-2">
+                      <Key className="w-4 h-4" /> API Key
+                    </Label>
+                    <Input
+                      value={settings.iyzico_api_key || ""}
+                      onChange={(e) => setSettings({ ...settings, iyzico_api_key: e.target.value })}
+                      placeholder="iyzico API Key giriniz"
+                      className="bg-slate-800 border-slate-700 text-white font-mono"
+                      data-testid="iyzico-api-key-input"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-slate-200 flex items-center gap-2">
+                      <Key className="w-4 h-4" /> Secret Key
+                    </Label>
+                    <Input
+                      type="password"
+                      value={settings.iyzico_secret_key || ""}
+                      onChange={(e) => setSettings({ ...settings, iyzico_secret_key: e.target.value })}
+                      placeholder="iyzico Secret Key giriniz"
+                      className="bg-slate-800 border-slate-700 text-white font-mono"
+                      data-testid="iyzico-secret-key-input"
+                    />
+                    <p className="text-xs text-slate-500">
+                      iyzico Merchant Panel'den "Ayarlar → API Bilgileri" bölümünden bulabilirsiniz
+                    </p>
+                  </div>
+                </div>
+
+                {settings.iyzico_api_key && settings.iyzico_secret_key && (
+                  <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                    <span className="text-emerald-300 text-sm">
+                      iyzico entegrasyonu yapılandırıldı ({settings.iyzico_base_url === "sandbox" ? "Test Modu" : "Canlı Mod"})
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
   );
