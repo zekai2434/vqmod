@@ -6,12 +6,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import axios from "axios";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus, UserPlus } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+const initialCustomerForm = {
+  name: "",
+  company: "",
+  email: "",
+  phone: "",
+  address: "",
+  tax_number: "",
+  tax_office: ""
+};
 
 export default function NewTicket() {
   const navigate = useNavigate();
@@ -28,6 +39,11 @@ export default function NewTicket() {
     priority: "",
     assigned_to: ""
   });
+  
+  // New customer dialog state
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
+  const [customerForm, setCustomerForm] = useState(initialCustomerForm);
+  const [savingCustomer, setSavingCustomer] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -65,6 +81,37 @@ export default function NewTicket() {
   const handleCustomerChange = (customerId) => {
     setFormData({ ...formData, customer_id: customerId, asset_id: "" });
     fetchAssets(customerId);
+  };
+
+  const handleAddCustomer = async () => {
+    if (!customerForm.name || !customerForm.email) {
+      toast.error("Ad ve e-posta zorunludur");
+      return;
+    }
+
+    setSavingCustomer(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API}/customers`, customerForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const newCustomer = response.data;
+      
+      // Add to customers list and select it
+      setCustomers(prev => [...prev, newCustomer]);
+      setFormData(prev => ({ ...prev, customer_id: newCustomer.id, asset_id: "" }));
+      setAssets([]); // New customer has no assets
+      
+      toast.success("Müşteri başarıyla eklendi ve seçildi");
+      setCustomerDialogOpen(false);
+      setCustomerForm(initialCustomerForm);
+    } catch (error) {
+      const msg = error.response?.data?.detail || "Müşteri eklenirken hata oluştu";
+      toast.error(msg);
+    } finally {
+      setSavingCustomer(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -107,16 +154,28 @@ export default function NewTicket() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="customer_id">Müşteri *</Label>
-                <Select value={formData.customer_id} onValueChange={handleCustomerChange} required>
-                  <SelectTrigger data-testid="customer-select">
-                    <SelectValue placeholder="Müşteri seçin" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name} - {c.company}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select value={formData.customer_id} onValueChange={handleCustomerChange} required>
+                    <SelectTrigger data-testid="customer-select" className="flex-1">
+                      <SelectValue placeholder="Müşteri seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customers.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.name} - {c.company}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCustomerDialogOpen(true)}
+                    title="Yeni Müşteri Ekle"
+                    data-testid="add-customer-btn"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -220,6 +279,117 @@ export default function NewTicket() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Add Customer Dialog */}
+      <Dialog open={customerDialogOpen} onOpenChange={setCustomerDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5" />
+              Hızlı Müşteri Ekle
+            </DialogTitle>
+            <DialogDescription>
+              Yeni müşteri bilgilerini girin. Müşteri eklendikten sonra otomatik seçilecektir.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Ad Soyad *</Label>
+                <Input
+                  value={customerForm.name}
+                  onChange={(e) => setCustomerForm({...customerForm, name: e.target.value})}
+                  placeholder="Ahmet Yılmaz"
+                  data-testid="new-customer-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Firma</Label>
+                <Input
+                  value={customerForm.company}
+                  onChange={(e) => setCustomerForm({...customerForm, company: e.target.value})}
+                  placeholder="ABC Teknoloji"
+                  data-testid="new-customer-company"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>E-posta *</Label>
+                <Input
+                  type="email"
+                  value={customerForm.email}
+                  onChange={(e) => setCustomerForm({...customerForm, email: e.target.value})}
+                  placeholder="ahmet@firma.com"
+                  data-testid="new-customer-email"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Telefon</Label>
+                <Input
+                  value={customerForm.phone}
+                  onChange={(e) => setCustomerForm({...customerForm, phone: e.target.value})}
+                  placeholder="0532 123 4567"
+                  data-testid="new-customer-phone"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Adres</Label>
+              <Textarea
+                value={customerForm.address}
+                onChange={(e) => setCustomerForm({...customerForm, address: e.target.value})}
+                placeholder="Firma adresi"
+                rows={2}
+                data-testid="new-customer-address"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Vergi No</Label>
+                <Input
+                  value={customerForm.tax_number}
+                  onChange={(e) => setCustomerForm({...customerForm, tax_number: e.target.value})}
+                  placeholder="1234567890"
+                  data-testid="new-customer-tax-number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Vergi Dairesi</Label>
+                <Input
+                  value={customerForm.tax_office}
+                  onChange={(e) => setCustomerForm({...customerForm, tax_office: e.target.value})}
+                  placeholder="Kadıköy VD"
+                  data-testid="new-customer-tax-office"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-4 border-t">
+              <Button 
+                onClick={handleAddCustomer} 
+                disabled={savingCustomer}
+                data-testid="save-new-customer-btn"
+              >
+                {savingCustomer ? "Ekleniyor..." : "Müşteri Ekle"}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setCustomerDialogOpen(false);
+                  setCustomerForm(initialCustomerForm);
+                }}
+              >
+                İptal
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
