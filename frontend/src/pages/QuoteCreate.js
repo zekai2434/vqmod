@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, FileText, Printer, ArrowLeft, Building2, Package, Calendar, CreditCard } from "lucide-react";
+import { Plus, Trash2, FileText, Printer, ArrowLeft, Building2, Package, Calendar, CreditCard, Save, List } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
 
@@ -16,12 +16,15 @@ const API = `${BACKEND_URL}/api`;
 
 export default function QuoteCreate() {
   const navigate = useNavigate();
+  const { quoteId } = useParams();
   const printRef = useRef();
   const [settings, setSettings] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [parts, setParts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [isPrintMode, setIsPrintMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const [formData, setFormData] = useState({
     customer_id: "",
@@ -44,7 +47,7 @@ export default function QuoteCreate() {
 
   useEffect(() => {
     fetchInitialData();
-  }, []);
+  }, [quoteId]);
 
   const fetchInitialData = async () => {
     try {
