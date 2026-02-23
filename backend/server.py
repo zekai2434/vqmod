@@ -2866,6 +2866,180 @@ async def get_ticket_sla_history(ticket_id: str, current_user: User = Depends(ge
     pauses = await db.sla_pauses.find({"ticket_id": ticket_id}, {"_id": 0}).sort("paused_at", -1).to_list(100)
     return pauses
 
+# ========== TICKET TIMELINE/HISTORY ENDPOINT ==========
+@api_router.get("/tickets/{ticket_id}/history")
+async def get_ticket_history(ticket_id: str, current_user: User = Depends(get_current_user)):
+    """Get chronological history of all events for a ticket"""
+    ticket = await db.tickets.find_one({"id": ticket_id}, {"_id": 0})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    
+    history_events = []
+    
+    # 1. Ticket Creation Event
+    history_events.append({
+        "id": f"created-{ticket_id}",
+        "event_type": "created",
+        "description": "Ticket oluşturuldu",
+        "timestamp": ticket['created_at'],
+        "user_id": ticket.get('created_by'),
+        "user_name": None,
+        "metadata": {
+            "status": ticket.get('status'),
+            "priority": ticket.get('priority'),
+            "category": ticket.get('category')
+        }
+    })
+    
+    # Get user names for events
+    users = await db.users.find({}, {"_id": 0, "id": 1, "full_name": 1}).to_list(1000)
+    user_map = {u['id']: u['full_name'] for u in users}
+    
+    # 2. Comments
+    comments = await db.ticket_comments.find({"ticket_id": ticket_id}, {"_id": 0}).to_list(1000)
+    for comment in comments:
+        history_events.append({
+            "id": f"comment-{comment['id']}",
+            "event_type": "comment",
+            "description": "Yorum eklendi" if not comment.get('is_internal') else "İç not eklendi",
+            "timestamp": comment['created_at'],
+            "user_id": comment.get('user_id'),
+            "user_name": comment.get('user_name'),
+            "metadata": {
+                "comment": comment['comment'],
+                "is_internal": comment.get('is_internal', False)
+            }
+        })
+    
+    # 3. Status Changes (from ticket status history if stored, otherwise we just have current status)
+    status_changes = await db.ticket_status_history.find({"ticket_id": ticket_id}, {"_id": 0}).to_list(1000)
+    for change in status_changes:
+        history_events.append({
+            "id": f"status-{change.get('id', str(uuid.uuid4()))}",
+            "event_type": "status_change",
+            "description": f"Durum değişti: {change.get('old_status', '?')} → {change.get('new_status', '?')}",
+            "timestamp": change['changed_at'],
+            "user_id": change.get('changed_by'),
+            "user_name": user_map.get(change.get('changed_by')),
+            "metadata": {
+                "old_status": change.get('old_status'),
+                "new_status": change.get('new_status')
+            }
+        })
+    
+    # 4. Assignment Changes
+    assignment_changes = await db.ticket_assignment_history.find({"ticket_id": ticket_id}, {"_id": 0}).to_list(1000)
+    for change in assignment_changes:
+        old_user = user_map.get(change.get('old_assignee'), 'Atanmamış')
+        new_user = user_map.get(change.get('new_assignee'), 'Atanmamış')
+        history_events.append({
+            "id": f"assign-{change.get('id', str(uuid.uuid4()))}",
+            "event_type": "assignment",
+            "description": f"Atama değişti: {old_user} → {new_user}",
+            "timestamp": change['changed_at'],
+            "user_id": change.get('changed_by'),
+            "user_name": user_map.get(change.get('changed_by')),
+            "metadata": {
+                "old_assignee": change.get('old_assignee'),
+                "new_assignee": change.get('new_assignee'),
+                "old_assignee_name": old_user,
+                "new_assignee_name": new_user
+            }
+        })
+    
+    # 5. SLA Pause/Resume Events
+    sla_pauses = await db.sla_pauses.find({"ticket_id": ticket_id}, {"_id": 0}).to_list(1000)
+    for pause in sla_pauses:
+        history_events.append({
+            "id": f"sla-pause-{pause.get('id', str(uuid.uuid4()))}",
+            "event_type": "sla_paused",
+            "description": f"SLA duraklatıldı: {pause.get('reason', '')}",
+            "timestamp": pause['paused_at'],
+            "user_id": pause.get('paused_by'),
+            "user_name": user_map.get(pause.get('paused_by')),
+            "metadata": {"reason": pause.get('reason')}
+        })
+        if pause.get('resumed_at'):
+            history_events.append({
+                "id": f"sla-resume-{pause.get('id', str(uuid.uuid4()))}",
+                "event_type": "sla_resumed",
+                "description": f"SLA devam ettirildi ({pause.get('pause_duration_minutes', 0)} dakika)",
+                "timestamp": pause['resumed_at'],
+                "user_id": pause.get('resumed_by'),
+                "user_name": user_map.get(pause.get('resumed_by')),
+                "metadata": {"duration_minutes": pause.get('pause_duration_minutes')}
+            })
+    
+    # 6. Attachments
+    attachments = await db.attachments.find({"related_to": "ticket", "related_id": ticket_id}, {"_id": 0}).to_list(1000)
+    for att in attachments:
+        history_events.append({
+            "id": f"attachment-{att['id']}",
+            "event_type": "attachment",
+            "description": f"Dosya eklendi: {att['filename']}",
+            "timestamp": att['created_at'],
+            "user_id": att.get('uploaded_by'),
+            "user_name": user_map.get(att.get('uploaded_by')),
+            "metadata": {
+                "filename": att['filename'],
+                "file_type": att['file_type'],
+                "file_size": att['file_size']
+            }
+        })
+    
+    # 7. Work Orders Created
+    work_orders = await db.work_orders.find({"ticket_id": ticket_id}, {"_id": 0}).to_list(100)
+    for wo in work_orders:
+        history_events.append({
+            "id": f"wo-created-{wo['id']}",
+            "event_type": "work_order_created",
+            "description": f"İş emri oluşturuldu",
+            "timestamp": wo['created_at'],
+            "user_id": None,
+            "user_name": None,
+            "metadata": {
+                "work_order_id": wo['id'],
+                "work_type": wo.get('work_type'),
+                "technician": user_map.get(wo.get('assigned_technician'))
+            }
+        })
+        if wo.get('completed_at'):
+            history_events.append({
+                "id": f"wo-completed-{wo['id']}",
+                "event_type": "work_order_completed",
+                "description": f"İş emri tamamlandı",
+                "timestamp": wo['completed_at'],
+                "user_id": wo.get('assigned_technician'),
+                "user_name": user_map.get(wo.get('assigned_technician')),
+                "metadata": {
+                    "work_order_id": wo['id'],
+                    "time_spent_minutes": wo.get('time_spent_minutes', 0)
+                }
+            })
+    
+    # 8. Resolution Event (if resolved)
+    if ticket.get('resolved_at'):
+        history_events.append({
+            "id": f"resolved-{ticket_id}",
+            "event_type": "resolved",
+            "description": "Ticket çözümlendi",
+            "timestamp": ticket['resolved_at'],
+            "user_id": None,
+            "user_name": None,
+            "metadata": {"final_status": ticket.get('status')}
+        })
+    
+    # Sort by timestamp
+    def get_timestamp(event):
+        ts = event.get('timestamp')
+        if isinstance(ts, str):
+            return datetime.fromisoformat(ts.replace('Z', '+00:00'))
+        return ts if ts else datetime.min.replace(tzinfo=timezone.utc)
+    
+    history_events.sort(key=get_timestamp)
+    
+    return history_events
+
 # Role & Permission Endpoints
 @api_router.get("/permissions")
 async def get_permissions(current_user: User = Depends(get_current_user)):
