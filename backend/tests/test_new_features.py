@@ -430,10 +430,11 @@ class TestTechnicianPerformance:
         
         # Verify detailed performance structure
         assert "technician_id" in data
-        assert "name" in data
-        assert "total_work_orders" in data
-        assert "completed_work_orders" in data
+        assert "technician_name" in data
+        assert "summary" in data
         assert "work_type_breakdown" in data
+        assert "monthly_trend" in data
+        assert "recent_work_orders" in data
     
     def test_technician_performance_unauthorized(self):
         """Test unauthorized access to technician performance"""
