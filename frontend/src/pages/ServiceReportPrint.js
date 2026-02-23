@@ -31,7 +31,7 @@ export default function ServiceReportPrint() {
       
       const [reportRes, settingsRes] = await Promise.all([
         axios.get(`${API}/reports/service-report/${ticketId}`, { headers }),
-        axios.get(`${API}/system-settings`, { headers }).catch(() => ({ data: null }))
+        axios.get(`${API}/settings/system`).catch(() => ({ data: null }))
       ]);
       
       setReport(reportRes.data);
