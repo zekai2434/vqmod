@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Printer, CreditCard, CheckCircle } from "lucide-react";
+import { ArrowLeft, Printer, CreditCard, CheckCircle, Download, Send, Settings } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
 
@@ -69,6 +69,47 @@ export default function InvoiceDetail() {
     window.print();
   };
 
+  const handleDownloadPDF = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/invoices/${id}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Fatura_${invoice.invoice_number}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("PDF indiriliyor...");
+    } catch (error) {
+      toast.error("PDF indirme başarısız");
+    }
+  };
+
+  const handleSendToBizimHesap = async () => {
+    if (!window.confirm("Bu faturayı BizimHesap'a e-fatura olarak göndermek istiyor musunuz?")) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API}/invoices/${id}/send-to-bizim-hesap`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("E-Fatura BizimHesap'a başarıyla gönderildi!");
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+      if (detail && detail.includes("Firm ID")) {
+        toast.error("BizimHesap entegrasyonu yapılandırılmamış. Sistem ayarlarından Firm ID ekleyin.");
+      } else {
+        toast.error(detail || "E-Fatura gönderme başarısız");
+      }
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-96">Yükleniyor...</div>;
   }
@@ -89,10 +130,24 @@ export default function InvoiceDetail() {
           Faturalara Dön
         </Button>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handleDownloadPDF} data-testid="download-pdf-btn">
+            <Download className="w-4 h-4 mr-2" />
+            PDF İndir
+          </Button>
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="w-4 h-4 mr-2" />
             Yazdır
           </Button>
+          {invoice?.status !== 'draft' && (
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handleSendToBizimHesap}
+              data-testid="send-bizimhesap-btn"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              E-Fatura Gönder
+            </Button>
+          )}
         </div>
       </div>
 
