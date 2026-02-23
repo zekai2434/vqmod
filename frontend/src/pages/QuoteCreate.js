@@ -54,7 +54,7 @@ export default function QuoteCreate() {
       const [customersRes, partsRes, settingsRes] = await Promise.all([
         axios.get(`${API}/customers`, { headers }),
         axios.get(`${API}/parts`, { headers }),
-        axios.get(`${API}/system-settings`, { headers }).catch(() => ({ data: null }))
+        axios.get(`${API}/settings/system`).catch(() => ({ data: null }))
       ]);
       
       setCustomers(customersRes.data);
