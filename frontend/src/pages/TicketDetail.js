@@ -375,8 +375,12 @@ export default function TicketDetail() {
             </CardContent>
           </Card>
 
-          <Tabs defaultValue="comments" className="w-full">
+          <Tabs defaultValue="timeline" className="w-full">
             <TabsList>
+              <TabsTrigger value="timeline" data-testid="timeline-tab">
+                <History className="w-4 h-4 mr-2" />
+                Zaman Çizelgesi
+              </TabsTrigger>
               <TabsTrigger value="comments">
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Yorumlar ({comments.length})
@@ -389,6 +393,10 @@ export default function TicketDetail() {
                 İş Emirleri ({workOrders.length})
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="timeline" className="mt-4">
+              <TicketTimeline ticketId={id} />
+            </TabsContent>
 
             <TabsContent value="comments" className="space-y-4 mt-4">
               <div className="space-y-4">
